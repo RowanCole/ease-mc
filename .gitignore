@@ -1,0 +1,99 @@
+.minecraft
+
+# ===================== 前端通用 =====================
+# 依赖
+node_modules
+.pnp
+.pnp.js
+
+# 构建产物
+dist
+dist-ssr
+build
+.output
+.output/*
+!.output/.gitkeep
+
+# 环境变量
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 日志
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# 编辑器缓存
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ===================== Rust / Tauri 核心 =====================
+# Rust 编译缓存 & 产物
+target/
+Cargo.lock  # 可选：库项目删除，二进制应用建议提交，按需注释掉
+
+# Tauri 构建输出
+src-tauri/target/
+src-tauri/.tauri/
+src-tauri/gen/
+
+# Tauri 签名密钥（重要！不要提交密钥）
+src-tauri/private_key.pem
+src-tauri/public_key.pem
+
+# Rust 环境
+src-tauri/.cargo/
+src-tauri/Cargo.lock
+
+# ===================== Tauri v2 额外缓存 =====================
+.tauri/
+.tauri-build/
+
+# ===================== 操作系统文件 =====================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+# ===================== 测试 / 临时文件 =====================
+*.log
+tmp/
+temp/
+*.tmp
+*.bak
+
+# ===================== 可选：前端框架特有（按需开启）=====================
+# Vue
+# *.local
+# .vuepress/dist
+
+# React
+# .next
+# out
+
+# SvelteKit
+# .svelte-kit
+
+# Vite
+# vite.config.ts.timestamp-*

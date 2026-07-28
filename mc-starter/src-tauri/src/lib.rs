@@ -1,0 +1,114 @@
+// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+use std::path::Path;
+use std::process::{Child, Command};
+use std::sync::Mutex;
+
+static GAME: Mutex<Option<Child>> = Mutex::new(None);
+
+#[tauri::command]
+fn greet(name: &str) -> String {
+    format!("Hello, {}! You've been greeted from Rust!", name)
+}
+
+
+fn collect_jars(dir: &Path, base: &Path, jars: &mut Vec<String>) -> Result<(), String> {
+    for entry in std::fs::read_dir(dir).map_err(|e| format!("read_dir failed: {}", e))? {
+        let entry = entry.map_err(|e| format!("entry failed: {}", e))?;
+        let path = entry.path();
+        if path.is_dir() {
+            collect_jars(&path, base, jars)?;
+        } else if path.extension().and_then(|s| s.to_str()) == Some("jar") {
+            if let Ok(rel) = path.strip_prefix(base) {
+                jars.push(rel.to_string_lossy().replace('\\', "/"));
+            }
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn launch_game() -> Result<(), String> {
+    let cwd = std::env::current_dir().map_err(|e| format!("Failed to get cwd: {}", e))?;
+    let minecraft_path = cwd.join(".minecraft");
+    println!("cwd: {:?}", cwd);
+    println!("minecraft_path: {:?}", minecraft_path);
+
+    if !minecraft_path.exists() {
+        return Err(format!(".minecraft directory not found at {:?}", minecraft_path));
+    }
+
+    // Build classpath from libraries/
+    let mut classpath: Vec<String> = Vec::new();
+    let lib_dir = minecraft_path.join("libraries");
+    if lib_dir.exists() {
+        collect_jars(&lib_dir, &minecraft_path, &mut classpath)?;
+    }
+    classpath.push("versions/1.21.1/1.21.1.jar".to_string());
+    let cp = classpath.join(";");
+
+    let game = Command::new("java")
+        .args([
+            "-XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump",
+            "-Djava.library.path=natives",
+            "-Djna.tmpdir=natives",
+            "-Dorg.lwjgl.system.SharedLibraryExtractPath=natives",
+            "-Dio.netty.native.workdir=natives",
+            "-Dminecraft.launcher.brand=manual",
+            "-Dminecraft.launcher.version=1.21.1",
+            "-cp",
+            &cp,
+            "net.minecraft.client.main.Main",
+            "--username",
+            "Steve",
+            "--version",
+            "1.21.1",
+            "--gameDir",
+            ".",
+            "--assetsDir",
+            "assets",
+            "--assetIndex",
+            "17",
+            "--uuid",
+            "00000000-0000-0000-0000-000000000000",
+            "--accessToken",
+            "0",
+            "--userType",
+            "mojang",
+            "--versionType",
+            "release",
+        ])
+        .current_dir(&minecraft_path)
+        .spawn()
+        .map_err(|e| format!("Failed to launch game: {}", e))?;
+
+    println!("Game process started with PID: {}", game.id());
+
+    *GAME.lock().map_err(|e| e.to_string())? = Some(game);
+    Ok(())
+}
+
+#[tauri::command]
+fn close_game() -> Result<(), String> {
+    let child = GAME.lock().map_err(|e| e.to_string())?.take();
+    if let Some(child) = child {
+        let pid = child.id();
+        let output = Command::new("taskkill")
+            .args(["/PID", &pid.to_string(), "/T", "/F"])
+            .output()
+            .map_err(|e| format!("Failed to kill process tree: {}", e))?;
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            eprintln!("taskkill error: {}", stderr);
+        }
+    }
+    Ok(())
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
+        .invoke_handler(tauri::generate_handler![greet, launch_game, close_game])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
