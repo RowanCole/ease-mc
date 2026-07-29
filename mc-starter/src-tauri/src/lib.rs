@@ -1,37 +1,20 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-use std::path::Path;
+mod utils;
+
+use utils::collect_jars;
 use std::process::{Child, Command};
 use std::sync::Mutex;
 
 static GAME: Mutex<Option<Child>> = Mutex::new(None);
 
 #[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
-
-fn collect_jars(dir: &Path, base: &Path, jars: &mut Vec<String>) -> Result<(), String> {
-    for entry in std::fs::read_dir(dir).map_err(|e| format!("read_dir failed: {}", e))? {
-        let entry = entry.map_err(|e| format!("entry failed: {}", e))?;
-        let path = entry.path();
-        if path.is_dir() {
-            collect_jars(&path, base, jars)?;
-        } else if path.extension().and_then(|s| s.to_str()) == Some("jar") {
-            if let Ok(rel) = path.strip_prefix(base) {
-                jars.push(rel.to_string_lossy().replace('\\', "/"));
-            }
-        }
-    }
-    Ok(())
-}
-
-#[tauri::command]
 fn launch_game() -> Result<(), String> {
     let cwd = std::env::current_dir().map_err(|e| format!("Failed to get cwd: {}", e))?;
     let minecraft_path = cwd.join(".minecraft");
+    let java = cwd.join("jdk-21.0.11").join("bin").join("java.exe");
     println!("cwd: {:?}", cwd);
     println!("minecraft_path: {:?}", minecraft_path);
+    println!("java: {:?}",java.to_str().unwrap());
 
     if !minecraft_path.exists() {
         return Err(format!(".minecraft directory not found at {:?}", minecraft_path));
@@ -45,8 +28,9 @@ fn launch_game() -> Result<(), String> {
     }
     classpath.push("versions/1.21.1/1.21.1.jar".to_string());
     let cp = classpath.join(";");
+ 
 
-    let game = Command::new("java")
+    let game = Command::new(java.to_str().unwrap())
         .args([
             "-XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump",
             "-Djava.library.path=natives",
@@ -108,7 +92,7 @@ fn close_game() -> Result<(), String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, launch_game, close_game])
+        .invoke_handler(tauri::generate_handler![launch_game, close_game])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
