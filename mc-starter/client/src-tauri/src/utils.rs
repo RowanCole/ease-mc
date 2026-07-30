@@ -1,5 +1,5 @@
 
-use std::path::Path;
+use std::{io, path::Path};
 
 pub fn collect_jars(dir: &Path, base: &Path, jars: &mut Vec<String>) -> Result<(), String> {
     for entry in std::fs::read_dir(dir).map_err(|e| format!("read_dir failed: {}", e))? {
@@ -16,10 +16,14 @@ pub fn collect_jars(dir: &Path, base: &Path, jars: &mut Vec<String>) -> Result<(
     Ok(())
 }
 
-pub fn get_game_proglam() -> Result<(),()>{
-    
+pub fn get_config() -> Result<(), io::Error> {
+    let config = Path::new("config.json");
+    if !config.exists() {
+        return Err(io::Error::new(io::ErrorKind::NotFound, format!("配置文件不存在: {:?}", config)));
+    }
     Ok(())
 }
+
 
 
 

@@ -4,8 +4,18 @@ mod utils;
 use utils::collect_jars;
 use std::process::{Child, Command};
 use std::sync::Mutex;
+use crate::utils::get_config;
 
 static GAME: Mutex<Option<Child>> = Mutex::new(None);
+
+#[tauri::command]
+fn init() -> Result<(), String> {
+    let config = get_config();
+    match config {
+        Ok(_) => Ok(()),
+        Err(e) => Ok(()),
+    }
+}
 
 #[tauri::command]
 fn launch_game() -> Result<(), String> {
@@ -88,10 +98,15 @@ fn close_game() -> Result<(), String> {
     Ok(())
 }
 
+// fn download_game() -> Result<(), String> {
+//     reqwest::get("https://www.minecraft.net/download")
+// }
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_store::Builder::default().build())
         .invoke_handler(tauri::generate_handler![launch_game, close_game])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
