@@ -4,8 +4,9 @@ mod utils;
 use utils::collect_jars;
 use std::process::{Child, Command};
 use std::sync::Mutex;
-use crate::utils::get_config;
 use tracing::{error, info};
+use std::{io, path::Path};
+
 
 static GAME: Mutex<Option<Child>> = Mutex::new(None);
 
@@ -100,6 +101,30 @@ fn close_game() -> Result<(), String> {
     Ok(())
 }
 
+
+#[tauri::command]
+fn get_config() -> Result<String, String> {
+    let content = std::fs::read_to_string("config.json")
+        .map_err(|e| format!("读取配置文件失败: {}", e))?;
+    let json: serde_json::Value = serde_json::from_str(&content)
+        .map_err(|e| format!("解析配置文件失败: {}", e))?;
+    json["gameIsInstalled"]
+        .as_str()
+        .map(|s| s.to_string())
+        .ok_or_else(|| "config.json 缺少 gameIsInstalled 字段".to_string())
+}
+
+#[cfg(test)]
+mod tests{
+    use super::*;
+
+    #[test]
+    fn test_get_config() {
+        let config = get_config().unwrap();
+        assert_eq!("false", config);
+    }
+}
+
 // fn download_game() -> Result<(), String> {
 //     reqwest::get("https://www.minecraft.net/download")
 // }
@@ -110,7 +135,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
-        .invoke_handler(tauri::generate_handler![launch_game, close_game])
+        .invoke_handler(tauri::generate_handler![launch_game, close_game,get_config])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

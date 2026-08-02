@@ -16,13 +16,6 @@ pub fn collect_jars(dir: &Path, base: &Path, jars: &mut Vec<String>) -> Result<(
     Ok(())
 }
 
-pub fn get_config() -> Result<(), io::Error> {
-    let config = Path::new("config.json");
-    if !config.exists() {
-        return Err(io::Error::new(io::ErrorKind::NotFound, format!("配置文件不存在: {:?}", config)));
-    }
-    Ok(())
-}
 
 
 

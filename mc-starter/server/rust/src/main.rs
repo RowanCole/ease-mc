@@ -4,7 +4,7 @@ use std::net::SocketAddr;
 
 #[tokio::main]
 async fn main() {
-    let app = Router::new().nest_service("/", ServeDir::new("."));
+    let app = Router::new().nest_service("/", ServeDir::new("。"));
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
     println!("Server running at http://localhost:3000/");
