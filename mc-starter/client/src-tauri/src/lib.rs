@@ -5,6 +5,7 @@ use utils::collect_jars;
 use std::process::{Child, Command};
 use std::sync::Mutex;
 use crate::utils::get_config;
+use tracing::{error, info};
 
 static GAME: Mutex<Option<Child>> = Mutex::new(None);
 
@@ -19,7 +20,7 @@ fn init() -> Result<(), String> {
 
 #[tauri::command]
 fn launch_game() -> Result<(), String> {
-    let cwd = std::env::current_dir().map_err(|e| format!("Failed to get cwd: {}", e))?;
+    let cwd = std::env::current_dir().unwrap().join("game");
     let minecraft_path = cwd.join(".minecraft");
     let java = cwd.join("jdk-21.0.11").join("bin").join("java.exe");
     println!("cwd: {:?}", cwd);
@@ -92,15 +93,17 @@ fn close_game() -> Result<(), String> {
             .map_err(|e| format!("Failed to kill process tree: {}", e))?;
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            eprintln!("taskkill error: {}", stderr);
+            error!("taskkill error: {}", stderr);
         }
     }
+    info!("Game process closed");
     Ok(())
 }
 
 // fn download_game() -> Result<(), String> {
 //     reqwest::get("https://www.minecraft.net/download")
 // }
+
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

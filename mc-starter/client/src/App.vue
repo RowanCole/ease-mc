@@ -53,11 +53,6 @@ async function startGame() {
     <!-- === Animated Background === -->
     <div class="bg-layer">
       <div class="bg-gradient"></div>
-      <div class="bg-orbs">
-        <div class="orb o1"></div>
-        <div class="orb o2"></div>
-        <div class="orb o3"></div>
-      </div>
       <div class="bg-grid"></div>
     </div>
 
@@ -209,28 +204,49 @@ async function startGame() {
 }
 
 :root {
-  --accent: #4FC3F7;
-  --accent2: #0288D1;
-  --bg-dark: #0a0e17;
-  --bg-mid: #111827;
-  --text: #040404;
-  --text-dim: #020202;
-  --border: rgba(255,255,255,0.06);
-  --radius: 12px;
+  --accent: #67d5ff;
+  --accent2: #229bd2;
+  --bg-dark: #071019;
+  --bg-mid: #0d1a26;
+  --surface: rgba(12, 28, 42, 0.84);
+  --surface-raised: rgba(16, 35, 51, 0.94);
+  --text: #f4f8fb;
+  --text-dim: #a8b8c5;
+  --text-muted: #718392;
+  --border: rgba(205, 230, 242, 0.12);
+  --border-strong: rgba(205, 230, 242, 0.22);
+  --radius-sm: 10px;
+  --radius-md: 16px;
 }
 
-  html {
-    background-image: url('/src/assets/background.jpg');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    height: 100vh;
-    overflow: hidden;
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif;
-    -webkit-font-smoothing: antialiased;
-    user-select: none;
-  }
+html {
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--bg-dark);
+  background-image: url('/src/assets/background.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+body {
+  height: 100vh;
+  overflow: hidden;
+  background: transparent;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
 
 #app {
   height: 100vh;
@@ -258,52 +274,17 @@ async function startGame() {
 .bg-gradient {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background:
+    linear-gradient(180deg, rgba(4, 12, 20, 0.48) 0%, rgba(4, 12, 20, 0.76) 58%, rgba(3, 9, 15, 0.92) 100%),
+    linear-gradient(90deg, rgba(3, 10, 17, 0.5), transparent 42%, rgba(3, 10, 17, 0.35));
 }
 
-.bg-orbs {
+.bg-layer::after {
+  content: '';
   position: absolute;
   inset: 0;
-}
-
-.orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.15;
-}
-
-.o1 {
-  width: 600px;
-  height: 600px;
-  background: #4FC3F7;
-  top: -200px;
-  right: -150px;
-  animation: drift 20s ease-in-out infinite;
-}
-
-.o2 {
-  width: 400px;
-  height: 400px;
-  background: #0288D1;
-  bottom: -100px;
-  left: -100px;
-  animation: drift 25s ease-in-out infinite reverse;
-}
-
-.o3 {
-  width: 300px;
-  height: 300px;
-  background: #7C4DFF;
-  top: 40%;
-  left: 55%;
-  animation: drift 18s ease-in-out infinite 5s;
-}
-
-@keyframes drift {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(30px, -30px) scale(1.05); }
-  66% { transform: translate(-20px, 15px) scale(0.95); }
+  pointer-events: none;
+  box-shadow: inset 0 0 140px rgba(2, 8, 13, 0.62);
 }
 
 .bg-grid {
@@ -312,9 +293,10 @@ async function startGame() {
   background-image:
     linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, black 30%, transparent 70%);
-  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, black 30%, transparent 70%);
+  background-size: 56px 56px;
+  opacity: 0.5;
+  mask-image: linear-gradient(180deg, transparent, black 18%, black 78%, transparent);
+  -webkit-mask-image: linear-gradient(180deg, transparent, black 18%, black 78%, transparent);
 }
 
 /* ===== Top Bar ===== */
@@ -324,7 +306,10 @@ async function startGame() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
+  min-height: 68px;
+  padding: 16px 22px;
+  border-bottom: 1px solid rgba(205, 230, 242, 0.08);
+  background: linear-gradient(180deg, rgba(5, 15, 24, 0.48), rgba(5, 15, 24, 0.08));
   -webkit-app-region: drag;
 }
 
@@ -332,38 +317,51 @@ async function startGame() {
 .top-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   -webkit-app-region: no-drag;
 }
 
 .game-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
   font-size: 11px;
   color: var(--accent);
-  background: rgba(79, 195, 247, 0.1);
-  border: 1px solid rgba(79, 195, 247, 0.2);
-  padding: 2px 10px;
+  background: rgba(103, 213, 255, 0.1);
+  border: 1px solid rgba(103, 213, 255, 0.24);
+  padding: 2px 11px;
   border-radius: 20px;
   font-weight: 500;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.4px;
 }
 
 .top-btn {
-  background: none;
-  border: none;
-  color: var(--text-dim);
-  cursor: pointer;
-  padding: 6px;
-  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: rgba(8, 23, 35, 0.42);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
   -webkit-app-region: no-drag;
 }
 
 .top-btn:hover {
-  background: rgba(255,255,255,0.06);
+  background: rgba(103, 213, 255, 0.1);
+  border-color: rgba(103, 213, 255, 0.22);
   color: var(--text);
+  transform: translateY(-1px);
+}
+
+.top-btn:focus-visible,
+.play-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 /* ===== Center ===== */
@@ -371,12 +369,13 @@ async function startGame() {
   position: relative;
   z-index: 5;
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 32px;
-  padding: 0 32px;
+  gap: 28px;
+  padding: 32px;
 }
 
 /* ===== Logo Area ===== */
@@ -385,24 +384,26 @@ async function startGame() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 13px;
 }
 
 .logo-icon {
-  margin-bottom: 4px;
-  filter: drop-shadow(0 0 20px rgba(79, 195, 247, 0.3));
-  animation: logo-float 4s ease-in-out infinite;
-}
-
-@keyframes logo-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+  display: flex;
+  width: 84px;
+  height: 84px;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.34));
+  animation: logo-breathe 8s ease-in-out infinite;
 }
 
 .game-title {
+  max-width: min(100%, 560px);
+  color: var(--text);
   font-size: 36px;
+  line-height: 1.15;
   font-weight: 700;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
   background: linear-gradient(135deg, #fff 60%, var(--accent));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -411,17 +412,23 @@ async function startGame() {
 
 .game-desc {
   font-size: 13px;
+  line-height: 1.5;
   color: var(--text-dim);
   letter-spacing: 0.5px;
 }
 
+@keyframes logo-breathe {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
 /* ===== Launch Area ===== */
 .launch-area {
+  width: min(100%, 320px);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  min-width: 280px;
+  gap: 10px;
 }
 
 /* Play Button */
@@ -430,58 +437,52 @@ async function startGame() {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 240px;
-  height: 56px;
+  width: 100%;
+  min-height: 58px;
   border: none;
-  border-radius: 28px;
+  border-radius: 14px;
   cursor: pointer;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  background: linear-gradient(135deg, #6dd9ff, #258fc6);
   color: #fff;
   overflow: hidden;
-  transition: all 0.3s;
-  box-shadow: 0 4px 24px rgba(79, 195, 247, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  box-shadow: 0 12px 28px rgba(8, 99, 143, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.26);
 }
 
 .play-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(79, 195, 247, 0.4);
+  filter: brightness(1.05);
+  box-shadow: 0 16px 34px rgba(8, 99, 143, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .play-btn:active {
   transform: translateY(0);
+  filter: brightness(0.98);
 }
 
 .play-btn.active {
-  background: linear-gradient(135deg, #1565C0, #1976D2);
-  box-shadow: 0 4px 24px rgba(25, 118, 210, 0.3);
+  background: linear-gradient(135deg, #2876bc, #18538a);
+  box-shadow: 0 12px 28px rgba(10, 62, 111, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .btn-ring {
   position: absolute;
-  inset: -2px;
-  border-radius: 30px;
-  border: 2px solid transparent;
-  background: linear-gradient(135deg, rgba(255,255,255,0.3), transparent) border-box;
-  -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.play-btn:hover:not(:disabled) .btn-ring {
-  opacity: 1;
+  inset: 1px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 13px;
+  opacity: 0.65;
+  pointer-events: none;
 }
 
 .btn-content {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 1px;
   position: relative;
   z-index: 1;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
 }
 
 /* ===== Bottom Bar ===== */
@@ -491,10 +492,21 @@ async function startGame() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 24px;
+  min-height: 50px;
+  gap: 16px;
+  padding: 12px 22px 16px;
+  border-top: 1px solid rgba(205, 230, 242, 0.08);
+  background: linear-gradient(180deg, rgba(5, 15, 24, 0.04), rgba(5, 15, 24, 0.38));
   font-size: 11px;
-  color: var(--text-dim);
-  opacity: 0.5;
+  color: var(--text-muted);
+}
+
+.copyright,
+.version {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ===== Side Panel ===== */
@@ -503,65 +515,66 @@ async function startGame() {
   top: 0;
   right: 0;
   width: 340px;
+  max-width: 100vw;
   height: 100vh;
-  background: rgba(17, 24, 39, 0.95);
-  backdrop-filter: blur(20px);
+  background: var(--surface-raised);
+  backdrop-filter: blur(18px) saturate(120%);
   border-left: 1px solid var(--border);
+  box-shadow: -24px 0 54px rgba(1, 7, 12, 0.36);
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  animation: panelIn 0.25s ease;
-}
-
-@keyframes panelIn {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
 }
 
 .panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 20px;
+  min-height: 68px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--border);
 }
 
 .panel-header h2 {
-  font-size: 15px;
+  color: var(--text);
+  font-size: 16px;
   font-weight: 600;
 }
 
 .panel-body {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 20px;
+  padding: 18px 20px 24px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 /* News */
 .news-card {
-  padding: 14px;
-  background: rgba(255,255,255,0.03);
+  padding: 15px;
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 20px rgba(1, 8, 13, 0.14);
 }
 
 .news-date {
   font-size: 11px;
-  color: var(--text-dim);
+  color: var(--text-muted);
   margin-bottom: 6px;
 }
 
 .news-title {
   font-size: 14px;
+  line-height: 1.4;
   font-weight: 600;
   margin-bottom: 4px;
 }
 
 .news-desc {
   font-size: 12px;
+  line-height: 1.55;
   color: var(--text-dim);
 }
 
@@ -569,7 +582,7 @@ async function startGame() {
 .setting-item {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 9px;
 }
 
 .setting-item label {
@@ -587,8 +600,8 @@ async function startGame() {
 .setting-row input[type="range"] {
   flex: 1;
   -webkit-appearance: none;
-  height: 3px;
-  background: rgba(255,255,255,0.1);
+  height: 4px;
+  background: rgba(205, 230, 242, 0.14);
   border-radius: 2px;
   outline: none;
 }
@@ -600,7 +613,12 @@ async function startGame() {
   border-radius: 50%;
   background: var(--accent);
   cursor: pointer;
-  box-shadow: 0 0 8px rgba(79, 195, 247, 0.4);
+  box-shadow: 0 0 0 4px rgba(103, 213, 255, 0.12), 0 0 10px rgba(103, 213, 255, 0.34);
+}
+
+.setting-row input[type="range"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 5px;
 }
 
 .setting-value {
@@ -611,16 +629,16 @@ async function startGame() {
 }
 
 .setting-dir {
-  background: rgba(255,255,255,0.03);
+  background: rgba(7, 20, 31, 0.62);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
 }
 
 .dir-text {
   font-size: 12px;
   font-family: 'Cascadia Code', 'Fira Code', monospace;
-  color: var(--text-dim);
+  color: var(--text-muted);
   word-break: break-all;
 }
 
@@ -640,9 +658,9 @@ async function startGame() {
   position: relative;
   width: 36px;
   height: 20px;
-  background: rgba(255,255,255,0.08);
+  background: rgba(205, 230, 242, 0.14);
   border-radius: 10px;
-  transition: background 0.2s;
+  transition: background-color 0.2s ease;
   flex-shrink: 0;
 }
 
@@ -652,9 +670,9 @@ async function startGame() {
   left: 2px;
   width: 16px;
   height: 16px;
-  background: var(--text-dim);
+  background: var(--text-muted);
   border-radius: 50%;
-  transition: all 0.2s;
+  transition: left 0.2s ease, background-color 0.2s ease;
 }
 
 .toggle-row input:checked + .toggle-track {
@@ -668,10 +686,105 @@ async function startGame() {
 
 /* Panel Transition */
 .panel-enter-active {
-  animation: panelIn 0.25s ease;
+  transition: transform 0.24s ease;
 }
 
 .panel-leave-active {
-  animation: panelIn 0.25s ease reverse;
+  transition: transform 0.2s ease;
+}
+
+.panel-enter-from,
+.panel-leave-to {
+  transform: translateX(100%);
+}
+
+@media (max-width: 560px) {
+  .top-bar {
+    min-height: 60px;
+    padding: 13px 16px;
+  }
+
+  .center {
+    gap: 24px;
+    padding: 24px 20px 18px;
+  }
+
+  .logo-icon {
+    width: 70px;
+    height: 70px;
+  }
+
+  .logo-icon svg {
+    width: 70px;
+    height: 70px;
+  }
+
+  .game-title {
+    max-width: calc(100vw - 40px);
+    font-size: 30px;
+  }
+
+  .game-desc {
+    max-width: calc(100vw - 40px);
+    font-size: 12px;
+  }
+
+  .bottom-bar {
+    min-height: 58px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 16px 14px;
+  }
+
+  .side-panel {
+    width: 100vw;
+  }
+
+  .panel-header {
+    min-height: 60px;
+    padding: 14px 16px;
+  }
+
+  .panel-body {
+    padding: 16px 16px 22px;
+  }
+}
+
+@media (max-height: 520px) {
+  .center {
+    gap: 18px;
+    padding-top: 16px;
+    padding-bottom: 12px;
+  }
+
+  .logo-icon {
+    width: 64px;
+    height: 64px;
+  }
+
+  .logo-icon svg {
+    width: 64px;
+    height: 64px;
+  }
+
+  .game-title {
+    font-size: 30px;
+  }
+
+  .play-btn {
+    min-height: 52px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 </style>
