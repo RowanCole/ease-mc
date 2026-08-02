@@ -1,779 +1,463 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { Box, Gamepad2, Play, Square } from 'lucide-vue-next'
 
-// === State ===
-const status = ref('ready') // ready | playing
-const showSettings = ref(false)
-const showNews = ref(false)
+const status = ref('ready')
+const statusText = ref('准备开始冒险')
 
-// Game info
 const gameInfo = {
-  name: '游戏名称',
-  version: '1.0.0',
-  description: 'welcome to Minecraft'
+  name: 'MC STARTER',
+  title: 'Minecraft',
+  subtitle: '进入属于你的方块世界',
 }
 
-// Settings
-const settings = ref({
-  ram: 4096,
-  gameDir: '%appdata%\\.minecraft',
-  autoClose: true,
-})
+const isPlaying = computed(() => status.value === 'playing')
 
-const statusText = ref('就绪')
-
-// === Actions ===
 async function startGame() {
-  if (status.value === 'playing') {
+  if (isPlaying.value) {
     try {
       await invoke('close_game')
       status.value = 'ready'
-      statusText.value = '就绪'
-    } catch (e) {
-      console.error('Close failed:', e)
+      statusText.value = '准备开始冒险'
+    } catch (error) {
+      console.error('Close failed:', error)
+      statusText.value = '暂时无法结束游戏'
     }
     return
   }
 
-  if (status.value !== 'ready') return
+  statusText.value = '正在启动游戏'
 
   try {
     await invoke('launch_game')
     status.value = 'playing'
-    statusText.value = '游戏运行中'
-  } catch (e) {
-    console.error('Launch failed:', e)
+    statusText.value = '游戏正在运行'
+  } catch (error) {
+    console.error('Launch failed:', error)
+    statusText.value = '启动失败，请稍后重试'
   }
 }
 </script>
 
 <template>
-  <div class="app">
-    <!-- === Animated Background === -->
-    <div class="bg-layer">
-      <div class="bg-gradient"></div>
-      <div class="bg-grid"></div>
-    </div>
+  <div class="app-shell">
+    <div class="scene" aria-hidden="true"></div>
+    <div class="scene-overlay" aria-hidden="true"></div>
+    <div class="scene-grid" aria-hidden="true"></div>
 
-    <!-- === Top Bar === -->
-    <div class="top-bar">
-      <div class="top-left">
-        <div class="game-badge">{{ gameInfo.version }}</div>
-      </div>
-      <div class="top-right">
-        <button class="top-btn" @click="showNews = !showNews" title="公告">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-          </svg>
-        </button>
-        <button class="top-btn" @click="showSettings = !showSettings" title="设置">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-            <circle cx="12" cy="12" r="3" />
-            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-          </svg>
-        </button>
-      </div>
-    </div>
-
-    <!-- === Center Content === -->
-    <main class="center">
-      <!-- Logo Area -->
-      <div class="logo-area">
-        <div class="logo-icon">
-          <svg viewBox="0 0 80 80" width="80" height="80" fill="none">
-            <defs>
-              <linearGradient id="lg" x1="0" y1="0" x2="80" y2="80">
-                <stop offset="0%" stop-color="#4FC3F7" />
-                <stop offset="100%" stop-color="#0288D1" />
-              </linearGradient>
-            </defs>
-            <rect x="8" y="8" width="64" height="64" rx="16" fill="url(#lg)" />
-            <path d="M28 40l10 10 16-16" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
+    <header class="topbar">
+      <div class="brand-lockup">
+        <div class="brand-mark" aria-hidden="true">
+          <Box :size="19" :stroke-width="2.3" />
         </div>
-        <h1 class="game-title">{{ gameInfo.name }}</h1>
-        <p class="game-desc">{{ gameInfo.description }}</p>
+        <p>{{ gameInfo.name }}</p>
       </div>
+    </header>
 
-      <!-- Launch Section -->
-      <div class="launch-area">
-        <button
-          class="play-btn"
-          :class="{ active: status === 'playing' }"
-          @click="startGame"
-        >
-          <span class="btn-ring"></span>
-          <span class="btn-content">
-            <svg v-if="status === 'ready'" viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
-              <path d="M8 5v14l11-7z" />
-            </svg>
-            <svg v-else viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
-              <rect x="6" y="4" width="4" height="16" rx="1" />
-              <rect x="14" y="4" width="4" height="16" rx="1" />
-            </svg>
-            <span>{{ status === 'ready' ? '开始游戏' : '退出' }}</span>
-          </span>
+    <main class="launcher-main">
+      <section class="hero-copy" aria-labelledby="launcher-title">
+        <div class="eyebrow"><span></span> WELCOME BACK</div>
+        <h1 id="launcher-title">{{ gameInfo.title }}</h1>
+        <p>{{ gameInfo.subtitle }}</p>
+      </section>
+
+      <section class="launch-deck" aria-label="游戏启动">
+        <div class="deck-intro">
+          <div class="deck-symbol" aria-hidden="true">
+            <Gamepad2 :size="22" :stroke-width="2" />
+          </div>
+          <div>
+            <p class="deck-state">{{ isPlaying ? '游戏正在运行' : '已准备就绪' }}</p>
+            <p class="deck-hint">{{ isPlaying ? '愿你的冒险一切顺利' : '随时可以开始新的冒险' }}</p>
+          </div>
+        </div>
+        <h2>{{ isPlaying ? '愿你的冒险一切顺利' : '准备好出发了吗？' }}</h2>
+        <p class="deck-copy">
+          {{ isPlaying ? '游戏正在运行。' : '点击下方按钮，即刻进入游戏。' }}
+        </p>
+
+        <div class="launch-divider"></div>
+
+        <button class="launch-button" :class="{ running: isPlaying }" type="button" @click="startGame">
+          <Square v-if="isPlaying" :size="18" fill="currentColor" />
+          <Play v-else :size="20" fill="currentColor" />
+          <span>{{ isPlaying ? '结束游戏' : '开始游戏' }}</span>
         </button>
-      </div>
+        <p class="launch-status">
+          <span :class="{ running: isPlaying }"></span>{{ statusText }}
+        </p>
+      </section>
     </main>
 
-    <!-- === Bottom Bar === -->
-    <div class="bottom-bar">
-      <span class="copyright">© {{ new Date().getFullYear() }} {{ gameInfo.name }}</span>
-      <span class="version">{{ gameInfo.version }} · {{ statusText }}</span>
-    </div>
-
-    <!-- === News Panel === -->
-    <Teleport to="body">
-      <Transition name="panel">
-        <div v-if="showNews" class="side-panel">
-          <div class="panel-header">
-            <h2>公告</h2>
-            <button class="top-btn" @click="showNews = false">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          <div class="panel-body">
-            <div class="news-card">
-              <div class="news-date">2026-07-18</div>
-              <div class="news-title">客户端 v1.0.0 发布</div>
-              <div class="news-desc">首个公开版本，欢迎体验</div>
-            </div>
-            <div class="news-card">
-              <div class="news-date">2026-07-10</div>
-              <div class="news-title">内测招募开启</div>
-              <div class="news-desc">限量内测资格发放中</div>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
-
-    <!-- === Settings Panel === -->
-    <Teleport to="body">
-      <Transition name="panel">
-        <div v-if="showSettings" class="side-panel">
-          <div class="panel-header">
-            <h2>设置</h2>
-            <button class="top-btn" @click="showSettings = false">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          <div class="panel-body">
-            <div class="setting-item">
-              <label>最大内存</label>
-              <div class="setting-row">
-                <input type="range" min="1024" max="16384" step="512" v-model.number="settings.ram" />
-                <span class="setting-value">{{ settings.ram >= 1024 ? `${settings.ram / 1024} GB` : `${settings.ram} MB` }}</span>
-              </div>
-            </div>
-            <div class="setting-item">
-              <label>游戏目录</label>
-              <div class="setting-dir">
-                <span class="dir-text">{{ settings.gameDir }}</span>
-              </div>
-            </div>
-            <div class="setting-item">
-              <label class="toggle-row">
-                <input type="checkbox" v-model="settings.autoClose" />
-                <span class="toggle-track">
-                  <span class="toggle-thumb"></span>
-                </span>
-                <span>启动后关闭启动器</span>
-              </label>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
+    <footer class="footer-bar">© {{ new Date().getFullYear() }} {{ gameInfo.name }}</footer>
   </div>
 </template>
 
 <style>
-/* ===== Reset ===== */
-*, *::before, *::after {
-  margin: 0;
-  padding: 0;
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
 :root {
-  --accent: #67d5ff;
-  --accent2: #229bd2;
-  --bg-dark: #071019;
-  --bg-mid: #0d1a26;
-  --surface: rgba(12, 28, 42, 0.84);
-  --surface-raised: rgba(16, 35, 51, 0.94);
-  --text: #f4f8fb;
-  --text-dim: #a8b8c5;
-  --text-muted: #718392;
-  --border: rgba(205, 230, 242, 0.12);
-  --border-strong: rgba(205, 230, 242, 0.22);
-  --radius-sm: 10px;
-  --radius-md: 16px;
+  color: #f4f6ef;
+  background: #101611;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif;
+  font-synthesis: none;
 }
 
-html {
-  height: 100vh;
-  overflow: hidden;
-  background-color: var(--bg-dark);
-  background-image: url('/src/assets/background.jpg');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  user-select: none;
+html,
+body,
+#app {
+  min-width: 100%;
+  min-height: 100%;
+  margin: 0;
 }
 
+html,
 body {
-  height: 100vh;
   overflow: hidden;
-  background: transparent;
-}
-
-button,
-input {
-  font: inherit;
 }
 
 button {
+  font: inherit;
   -webkit-tap-highlight-color: transparent;
-}
-
-#app {
-  height: 100vh;
 }
 </style>
 
 <style scoped>
-/* ===== App Shell ===== */
-.app {
+.app-shell {
+  --ink: #f5f7f0;
+  --muted: #c3cec0;
+  --quiet: #8e9c8d;
+  --line: rgba(234, 242, 227, 0.17);
+  --lime: #b6ef77;
+  --lime-bright: #d9ffab;
+  --amber: #ffc276;
   position: relative;
-  height: 100vh;
+  isolation: isolate;
   display: flex;
+  min-height: 100vh;
   flex-direction: column;
   overflow: hidden;
 }
 
-/* ===== Background ===== */
-.bg-layer {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-}
-
-.bg-gradient {
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(180deg, rgba(4, 12, 20, 0.48) 0%, rgba(4, 12, 20, 0.76) 58%, rgba(3, 9, 15, 0.92) 100%),
-    linear-gradient(90deg, rgba(3, 10, 17, 0.5), transparent 42%, rgba(3, 10, 17, 0.35));
-}
-
-.bg-layer::after {
-  content: '';
+.scene,
+.scene-overlay,
+.scene-grid {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  box-shadow: inset 0 0 140px rgba(2, 8, 13, 0.62);
 }
 
-.bg-grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
-  background-size: 56px 56px;
-  opacity: 0.5;
-  mask-image: linear-gradient(180deg, transparent, black 18%, black 78%, transparent);
-  -webkit-mask-image: linear-gradient(180deg, transparent, black 18%, black 78%, transparent);
+.scene {
+  z-index: -3;
+  background: url('/src/assets/background.jpg') center / cover no-repeat;
+  transform: scale(1.02);
 }
 
-/* ===== Top Bar ===== */
-.top-bar {
-  position: relative;
-  z-index: 10;
+.scene-overlay {
+  z-index: -2;
+  background:
+    linear-gradient(90deg, rgba(11, 18, 12, 0.91) 0%, rgba(12, 20, 13, 0.72) 38%, rgba(12, 18, 12, 0.28) 72%, rgba(7, 12, 8, 0.5) 100%),
+    linear-gradient(0deg, rgba(6, 10, 7, 0.86) 0%, transparent 46%, rgba(6, 10, 7, 0.15) 100%);
+}
+
+.scene-grid {
+  z-index: -1;
+  opacity: 0.16;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 36px 36px;
+  mask-image: linear-gradient(to bottom, transparent, black 14%, black 88%, transparent);
+}
+
+.topbar {
   display: flex;
+  min-height: 82px;
   align-items: center;
-  justify-content: space-between;
-  min-height: 68px;
-  padding: 16px 22px;
-  border-bottom: 1px solid rgba(205, 230, 242, 0.08);
-  background: linear-gradient(180deg, rgba(5, 15, 24, 0.48), rgba(5, 15, 24, 0.08));
+  padding: 0 clamp(24px, 4vw, 64px);
+  background: rgba(9, 15, 10, 0.34);
+  border-bottom: 1px solid rgba(234, 242, 227, 0.1);
   -webkit-app-region: drag;
 }
 
-.top-left,
-.top-right {
+.brand-lockup {
   display: flex;
   align-items: center;
-  gap: 6px;
-  -webkit-app-region: no-drag;
+  gap: 11px;
 }
 
-.game-badge {
+.brand-mark {
+  display: grid;
+  width: 35px;
+  height: 35px;
+  place-items: center;
+  color: #14200f;
+  background: var(--lime);
+  border: 1px solid rgba(244, 255, 227, 0.62);
+  border-radius: 6px;
+  box-shadow: 0 7px 18px rgba(100, 153, 50, 0.25);
+}
+
+.brand-lockup p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.launcher-main {
+  display: grid;
+  width: min(100% - 48px, 1120px);
+  grid-template-columns: minmax(0, 1.25fr) minmax(310px, 0.75fr);
+  gap: clamp(48px, 9vw, 150px);
+  margin: auto;
+  padding: 44px 0;
+}
+
+.hero-copy {
+  align-self: center;
+  max-width: 640px;
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--lime-bright);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.eyebrow span {
+  width: 28px;
+  height: 1px;
+  background: currentColor;
+}
+
+.hero-copy h1 {
+  margin: 17px 0 13px;
+  color: var(--ink);
+  font-size: clamp(50px, 7vw, 88px);
+  font-weight: 850;
+  line-height: 0.94;
+  letter-spacing: 0;
+}
+
+.hero-copy > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.launch-deck {
+  align-self: center;
+  padding: 32px 34px 25px;
+  color: var(--ink);
+  text-align: left;
+  background: rgba(16, 25, 17, 0.83);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(18px) saturate(105%);
+}
+
+.deck-intro {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 27px;
+}
+
+.deck-symbol {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  place-items: center;
+  color: #1a2713;
+  background: var(--lime);
+  border: 1px solid rgba(248, 255, 238, 0.58);
+  border-radius: 6px;
+  box-shadow: 0 8px 19px rgba(122, 181, 63, 0.22);
+}
+
+.deck-state {
+  margin: 0;
+  color: var(--lime-bright);
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.deck-hint {
+  margin: 4px 0 0;
+  color: var(--quiet);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.launch-deck h2 {
+  margin: 0 0 9px;
+  color: var(--ink);
+  font-size: 25px;
+  font-weight: 760;
+  line-height: 1.2;
+}
+
+.deck-copy {
+  min-height: 23px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.launch-divider {
+  height: 1px;
+  margin: 29px 0 20px;
+  background: rgba(234, 242, 227, 0.12);
+}
+
+.launch-button {
   display: inline-flex;
-  align-items: center;
-  min-height: 26px;
-  font-size: 11px;
-  color: var(--accent);
-  background: rgba(103, 213, 255, 0.1);
-  border: 1px solid rgba(103, 213, 255, 0.24);
-  padding: 2px 11px;
-  border-radius: 20px;
-  font-weight: 500;
-  letter-spacing: 0.4px;
-}
-
-.top-btn {
-  display: flex;
+  width: 100%;
+  min-height: 58px;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  background: rgba(8, 23, 35, 0.42);
-  color: var(--text-dim);
+  gap: 9px;
+  padding: 0 18px;
+  color: #13200e;
+  background: var(--lime);
+  border: 1px solid rgba(248, 255, 238, 0.65);
+  border-radius: 5px;
+  box-shadow: 0 12px 26px rgba(109, 169, 52, 0.25);
   cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
-  -webkit-app-region: no-drag;
+  font-size: 16px;
+  font-weight: 850;
+  transition: background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
-.top-btn:hover {
-  background: rgba(103, 213, 255, 0.1);
-  border-color: rgba(103, 213, 255, 0.22);
-  color: var(--text);
+.launch-button:hover {
+  background: var(--lime-bright);
+  box-shadow: 0 15px 30px rgba(109, 169, 52, 0.35);
   transform: translateY(-1px);
 }
 
-.top-btn:focus-visible,
-.play-btn:focus-visible {
-  outline: 2px solid var(--accent);
+.launch-button:active {
+  transform: translateY(0);
+}
+
+.launch-button.running {
+  color: #382006;
+  background: var(--amber);
+  box-shadow: 0 12px 26px rgba(223, 143, 52, 0.22);
+}
+
+.launch-button:focus-visible {
+  outline: 2px solid var(--lime-bright);
   outline-offset: 3px;
 }
 
-/* ===== Center ===== */
-.center {
-  position: relative;
-  z-index: 5;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 28px;
-  padding: 32px;
-}
-
-/* ===== Logo Area ===== */
-.logo-area {
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 13px;
-}
-
-.logo-icon {
-  display: flex;
-  width: 84px;
-  height: 84px;
-  align-items: center;
-  justify-content: center;
-  filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.34));
-  animation: logo-breathe 8s ease-in-out infinite;
-}
-
-.game-title {
-  max-width: min(100%, 560px);
-  color: var(--text);
-  font-size: 36px;
-  line-height: 1.15;
-  font-weight: 700;
-  letter-spacing: 1px;
-  background: linear-gradient(135deg, #fff 60%, var(--accent));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.game-desc {
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--text-dim);
-  letter-spacing: 0.5px;
-}
-
-@keyframes logo-breathe {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
-}
-
-/* ===== Launch Area ===== */
-.launch-area {
-  width: min(100%, 320px);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
-
-/* Play Button */
-.play-btn {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 58px;
-  border: none;
-  border-radius: 14px;
-  cursor: pointer;
-  background: linear-gradient(135deg, #6dd9ff, #258fc6);
-  color: #fff;
-  overflow: hidden;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
-  box-shadow: 0 12px 28px rgba(8, 99, 143, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.26);
-}
-
-.play-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  filter: brightness(1.05);
-  box-shadow: 0 16px 34px rgba(8, 99, 143, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.3);
-}
-
-.play-btn:active {
-  transform: translateY(0);
-  filter: brightness(0.98);
-}
-
-.play-btn.active {
-  background: linear-gradient(135deg, #2876bc, #18538a);
-  box-shadow: 0 12px 28px rgba(10, 62, 111, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.18);
-}
-
-.btn-ring {
-  position: absolute;
-  inset: 1px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 13px;
-  opacity: 0.65;
-  pointer-events: none;
-}
-
-.btn-content {
-  display: flex;
+.launch-status {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  position: relative;
-  z-index: 1;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.8px;
-}
-
-/* ===== Bottom Bar ===== */
-.bottom-bar {
-  position: relative;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 50px;
-  gap: 16px;
-  padding: 12px 22px 16px;
-  border-top: 1px solid rgba(205, 230, 242, 0.08);
-  background: linear-gradient(180deg, rgba(5, 15, 24, 0.04), rgba(5, 15, 24, 0.38));
+  max-width: 100%;
+  margin: 15px 0 0;
+  color: var(--quiet);
   font-size: 11px;
-  color: var(--text-muted);
+  font-weight: 650;
 }
 
-.copyright,
-.version {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* ===== Side Panel ===== */
-.side-panel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 340px;
-  max-width: 100vw;
-  height: 100vh;
-  background: var(--surface-raised);
-  backdrop-filter: blur(18px) saturate(120%);
-  border-left: 1px solid var(--border);
-  box-shadow: -24px 0 54px rgba(1, 7, 12, 0.36);
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-}
-
-.panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 68px;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
-}
-
-.panel-header h2 {
-  color: var(--text);
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.panel-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 18px 20px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-/* News */
-.news-card {
-  padding: 15px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 8px 20px rgba(1, 8, 13, 0.14);
-}
-
-.news-date {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-bottom: 6px;
-}
-
-.news-title {
-  font-size: 14px;
-  line-height: 1.4;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.news-desc {
-  font-size: 12px;
-  line-height: 1.55;
-  color: var(--text-dim);
-}
-
-/* Settings */
-.setting-item {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-}
-
-.setting-item label {
-  font-size: 12px;
-  color: var(--text-dim);
-  font-weight: 500;
-}
-
-.setting-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.setting-row input[type="range"] {
-  flex: 1;
-  -webkit-appearance: none;
-  height: 4px;
-  background: rgba(205, 230, 242, 0.14);
-  border-radius: 2px;
-  outline: none;
-}
-
-.setting-row input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
+.launch-status > span {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  background: var(--lime);
   border-radius: 50%;
-  background: var(--accent);
-  cursor: pointer;
-  box-shadow: 0 0 0 4px rgba(103, 213, 255, 0.12), 0 0 10px rgba(103, 213, 255, 0.34);
+  box-shadow: 0 0 0 3px rgba(182, 239, 119, 0.13);
 }
 
-.setting-row input[type="range"]:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 5px;
+.launch-status > span.running {
+  background: var(--amber);
+  box-shadow: 0 0 0 3px rgba(255, 194, 118, 0.13);
 }
 
-.setting-value {
-  font-size: 13px;
-  font-weight: 600;
-  min-width: 50px;
-  text-align: right;
-}
-
-.setting-dir {
-  background: rgba(7, 20, 31, 0.62);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 10px 12px;
-}
-
-.dir-text {
-  font-size: 12px;
-  font-family: 'Cascadia Code', 'Fira Code', monospace;
-  color: var(--text-muted);
-  word-break: break-all;
-}
-
-.toggle-row {
-  display: flex !important;
+.footer-bar {
+  display: flex;
+  min-height: 47px;
   align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  flex-direction: row !important;
+  justify-content: center;
+  color: rgba(235, 243, 230, 0.55);
+  background: rgba(6, 10, 7, 0.34);
+  border-top: 1px solid rgba(234, 242, 227, 0.1);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.07em;
 }
 
-.toggle-row input {
-  display: none;
-}
-
-.toggle-track {
-  position: relative;
-  width: 36px;
-  height: 20px;
-  background: rgba(205, 230, 242, 0.14);
-  border-radius: 10px;
-  transition: background-color 0.2s ease;
-  flex-shrink: 0;
-}
-
-.toggle-thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
-  background: var(--text-muted);
-  border-radius: 50%;
-  transition: left 0.2s ease, background-color 0.2s ease;
-}
-
-.toggle-row input:checked + .toggle-track {
-  background: var(--accent);
-}
-
-.toggle-row input:checked + .toggle-track .toggle-thumb {
-  left: 18px;
-  background: #fff;
-}
-
-/* Panel Transition */
-.panel-enter-active {
-  transition: transform 0.24s ease;
-}
-
-.panel-leave-active {
-  transition: transform 0.2s ease;
-}
-
-.panel-enter-from,
-.panel-leave-to {
-  transform: translateX(100%);
-}
-
-@media (max-width: 560px) {
-  .top-bar {
-    min-height: 60px;
-    padding: 13px 16px;
+@media (max-width: 800px) {
+  .launcher-main {
+    width: min(100% - 40px, 560px);
+    grid-template-columns: 1fr;
+    gap: 38px;
+    padding-block: 39px 31px;
   }
 
-  .center {
-    gap: 24px;
-    padding: 24px 20px 18px;
-  }
-
-  .logo-icon {
-    width: 70px;
-    height: 70px;
-  }
-
-  .logo-icon svg {
-    width: 70px;
-    height: 70px;
-  }
-
-  .game-title {
-    max-width: calc(100vw - 40px);
-    font-size: 30px;
-  }
-
-  .game-desc {
-    max-width: calc(100vw - 40px);
-    font-size: 12px;
-  }
-
-  .bottom-bar {
-    min-height: 58px;
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 4px;
-    padding: 10px 16px 14px;
-  }
-
-  .side-panel {
-    width: 100vw;
-  }
-
-  .panel-header {
-    min-height: 60px;
-    padding: 14px 16px;
-  }
-
-  .panel-body {
-    padding: 16px 16px 22px;
+  .hero-copy {
+    align-self: end;
   }
 }
 
-@media (max-height: 520px) {
-  .center {
-    gap: 18px;
-    padding-top: 16px;
-    padding-bottom: 12px;
+@media (max-width: 530px) {
+  .topbar {
+    min-height: 66px;
+    padding-inline: 16px;
   }
 
-  .logo-icon {
-    width: 64px;
-    height: 64px;
+  .launcher-main {
+    width: min(100% - 32px, 560px);
+    padding-top: 31px;
   }
 
-  .logo-icon svg {
-    width: 64px;
-    height: 64px;
+  .hero-copy h1 {
+    font-size: 51px;
   }
 
-  .game-title {
-    font-size: 30px;
+  .hero-copy > p {
+    font-size: 14px;
   }
 
-  .play-btn {
-    min-height: 52px;
+  .launch-deck {
+    padding: 28px 22px 23px;
+  }
+}
+
+@media (max-height: 650px) and (min-width: 801px) {
+  .launcher-main {
+    padding-block: 25px;
+  }
+
+  .launch-deck {
+    padding-top: 23px;
+  }
+
+  .deck-symbol {
+    width: 42px;
+    height: 42px;
+  }
+
+  .deck-intro {
+    margin-bottom: 19px;
+  }
+
+  .launch-divider {
+    margin-block: 19px 16px;
   }
 }
 
@@ -781,8 +465,6 @@ button {
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }

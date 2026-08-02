@@ -1,12 +1,13 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 mod utils;
 
+use reqwest::Client;
 use utils::collect_jars;
 use std::process::{Child, Command};
 use std::sync::Mutex;
 use tracing::{error, info};
-use std::{io, path::Path};
-
+use futures_util::StreamExt;
+use tokio::io::AsyncWriteExt;
 
 static GAME: Mutex<Option<Child>> = Mutex::new(None);
 
@@ -114,28 +115,65 @@ fn get_config() -> Result<String, String> {
         .ok_or_else(|| "config.json 缺少 gameIsInstalled 字段".to_string())
 }
 
-#[cfg(test)]
-mod tests{
-    use super::*;
 
-    #[test]
-    fn test_get_config() {
-        let config = get_config().unwrap();
-        assert_eq!("false", config);
+
+#[tauri::command]
+async fn download_game() {
+    let client = Client::new();
+
+    let offset = tokio::fs::metadata("game.zip").await.map(|m| m.len() as u64).unwrap_or(0) as u64;
+    let response = client
+        .get("http://localhost:3000/game.zip")
+        .header("Range", format!("bytes={}-", offset))
+        .send()
+        .await
+        .unwrap();
+    
+    let mut file = match response.status().as_u16() {
+        200 => {
+            tokio::fs::File::create("game.zip").await.unwrap()
+        }
+        206 => {
+            tokio::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open("game.zip")
+                .await
+                .unwrap()
+        }
+        _ => {
+            tokio::fs::File::create("game.zip").await.unwrap()
+        }
+    };
+
+    let mut stream = response.bytes_stream();
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.unwrap();
+        file.write_all(&chunk).await.unwrap();
     }
+    file.flush().await.unwrap();
+
+    info!("Download completed");
+
+
 }
 
-// fn download_game() -> Result<(), String> {
-//     reqwest::get("https://www.minecraft.net/download")
-// }
+#[cfg(test)]
+mod tests {
+    use super::*;
 
+    #[tokio::test]
+    async fn test_download_game() {
+        download_game().await;
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_store::Builder::default().build())
-        .invoke_handler(tauri::generate_handler![launch_game, close_game,get_config])
+        .invoke_handler(tauri::generate_handler![launch_game, close_game,get_config,download_game])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
