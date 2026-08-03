@@ -12,9 +12,9 @@
   "app": {
     "windows": [
       {
-        "title": "HMCL-plus",
-        "width": 800,
-        "height": 600
+        "title": "welcome",
+        "width": 900,
+        "height": 700
       }
     ],
     "security": {

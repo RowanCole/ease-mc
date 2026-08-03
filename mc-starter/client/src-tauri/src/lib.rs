@@ -13,7 +13,7 @@ static GAME: Mutex<Option<Child>> = Mutex::new(None);
 
 #[tauri::command]
 fn init() -> Result<(), String> {
-    let config = get_config();
+    let config = get_config("gameIsInstalled");
     match config {
         Ok(_) => Ok(()),
         Err(e) => Ok(()),
@@ -104,18 +104,33 @@ fn close_game() -> Result<(), String> {
 
 
 #[tauri::command]
-fn get_config() -> Result<String, String> {
+fn get_config(key: &str) -> Result<String, String> {
     let content = std::fs::read_to_string("config.json")
         .map_err(|e| format!("读取配置文件失败: {}", e))?;
     let json: serde_json::Value = serde_json::from_str(&content)
         .map_err(|e| format!("解析配置文件失败: {}", e))?;
-    json["gameIsInstalled"]
+    json[key]
         .as_str()
         .map(|s| s.to_string())
-        .ok_or_else(|| "config.json 缺少 gameIsInstalled 字段".to_string())
+        .ok_or_else(|| format!("config.json 缺少 {} 字段", key))
 }
 
-
+fn set_config(key: &str, value: &str) -> Result<(), String> {
+    let mut json: serde_json::Value = if std::path::Path::new("config.json").exists() {
+        let content = std::fs::read_to_string("config.json")
+            .map_err(|e| format!("读取配置文件失败: {}", e))?;
+        serde_json::from_str(&content)
+            .map_err(|e| format!("解析配置文件失败: {}", e))?
+    } else {
+        serde_json::json!({})
+    };
+    json[key] = serde_json::Value::String(value.to_string());
+    let content = serde_json::to_string_pretty(&json)
+        .map_err(|e| format!("序列化配置文件失败: {}", e))?;
+    std::fs::write("config.json", content)
+        .map_err(|e| format!("写入配置文件失败: {}", e))?;
+    Ok(())
+}
 
 #[tauri::command]
 async fn download_game() {
@@ -147,12 +162,14 @@ async fn download_game() {
     };
 
     let mut stream = response.bytes_stream();
+    set_config("gameIsInstalled", "downloading").unwrap();
     while let Some(chunk) = stream.next().await {
         let chunk = chunk.unwrap();
         file.write_all(&chunk).await.unwrap();
     }
     file.flush().await.unwrap();
 
+    set_config("gameIsInstalled", "installed").unwrap();
     info!("Download completed");
 
 
