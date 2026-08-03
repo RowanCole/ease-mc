@@ -49,7 +49,7 @@ mc-starter/client/src-tauri/gen/
 
 # Tauri 运行时生成文件（勿提交）
 mc-starter/client/src-tauri/game.zip
-mc-starter/client/src-tauri/config.json
+
 
 # Tauri 签名密钥（重要！不要提交密钥）
 mc-starter/client/src-tauri/private_key.pem

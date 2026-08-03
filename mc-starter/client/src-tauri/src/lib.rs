@@ -183,7 +183,7 @@ mod tests {
     async fn test_download_game() {
         download_game().await;
     }
-}//
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
