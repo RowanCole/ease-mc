@@ -10,6 +10,7 @@ const gameInfo = {
 }
 
 const quickPrompts = ['新手应该先做什么？', '怎么找到钻石？', '下界要注意什么？']
+const simulatedDownloadDuration = 100_000
 
 // 防止 React StrictMode 开发模式下重复触发下载
 let installCheckStarted = false
@@ -40,9 +41,45 @@ function getAssistantReply(message) {
   return '我可以帮你聊生存技巧、合成思路、探索路线和联机玩法。换个问法再告诉我你的困惑吧。'
 }
 
+function DownloadWaveSvg() {
+  return (
+    <span className="download-wave-svg" aria-hidden="true">
+      <svg className="download-wave-layer download-wave-layer--back" viewBox="0 0 2000 100" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="download-wave-back" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#a5e8f8" stopOpacity="0.24" />
+            <stop offset="100%" stopColor="#58c4e8" stopOpacity="0.26" />
+          </linearGradient>
+        </defs>
+        <path d="M0 66 C83 59 167 59 250 66 C333 73 417 73 500 66 C583 59 667 59 750 66 C833 73 917 73 1000 66 C1083 59 1167 59 1250 66 C1333 73 1417 73 1500 66 C1583 59 1667 59 1750 66 C1833 73 1917 73 2000 66 V100 H0 Z" fill="url(#download-wave-back)" />
+      </svg>
+      <svg className="download-wave-layer download-wave-layer--mid" viewBox="0 0 2000 100" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="download-wave-mid" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#91e3f6" stopOpacity="0.36" />
+            <stop offset="100%" stopColor="#58c4e8" stopOpacity="0.4" />
+          </linearGradient>
+        </defs>
+        <path d="M0 64 C83 55 167 55 250 64 C333 73 417 73 500 64 C583 55 667 55 750 64 C833 73 917 73 1000 64 C1083 55 1167 55 1250 64 C1333 73 1417 73 1500 64 C1583 55 1667 55 1750 64 C1833 73 1917 73 2000 64 V100 H0 Z" fill="url(#download-wave-mid)" />
+      </svg>
+      <svg className="download-wave-layer download-wave-layer--front" viewBox="0 0 2000 100" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="download-wave-front" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#c7f5ff" stopOpacity="0.7" />
+            <stop offset="58%" stopColor="#74d3ee" stopOpacity="0.74" />
+            <stop offset="100%" stopColor="#58c4e8" stopOpacity="0.78" />
+          </linearGradient>
+        </defs>
+        <path d="M0 62 C83 52 167 52 250 62 C333 72 417 72 500 62 C583 52 667 52 750 62 C833 72 917 72 1000 62 C1083 52 1167 52 1250 62 C1333 72 1417 72 1500 62 C1583 52 1667 52 1750 62 C1833 72 1917 72 2000 62 V100 H0 Z" fill="url(#download-wave-front)" />
+        <path d="M0 62 C83 52 167 52 250 62 C333 72 417 72 500 62 C583 52 667 52 750 62 C833 72 917 72 1000 62 C1083 52 1167 52 1250 62 C1333 72 1417 72 1500 62 C1583 52 1667 52 1750 62 C1833 72 1917 72 2000 62" className="download-wave-crest" />
+      </svg>
+    </span>
+  )
+}
+
 export default function App() {
-  const [status, setStatus] = useState('ready')
-  const [statusText, setStatusText] = useState('准备开始冒险')
+  const [status, setStatus] = useState('downloading')
+  const [statusText, setStatusText] = useState('游戏下载中...')
   const [showChat, setShowChat] = useState(false)
   const [draftMessage, setDraftMessage] = useState('')
   const [isReplying, setIsReplying] = useState(false)
@@ -56,6 +93,7 @@ export default function App() {
   const chatListRef = useRef(null)
 
   const isPlaying = status === 'playing'
+  const isDownloading = status === 'downloading'
 
   // 应用启动时检查游戏是否已安装，未安装则自动下载
   useEffect(() => {
@@ -63,6 +101,8 @@ export default function App() {
       if (installCheckStarted) return
       installCheckStarted = true
 
+      // 动画从开屏立即开始，避免配置读取期间闪现启动按钮。
+      const simulatedDownload = new Promise((resolve) => window.setTimeout(resolve, simulatedDownloadDuration))
       let installed = ''
       try {
         installed = await invoke('get_config', { key: 'gameIsInstalled' })
@@ -72,14 +112,23 @@ export default function App() {
       }
 
       if (installed === 'false') {
-        setStatusText('正在下载游戏，请稍候')
-        try {
-          await invoke('download_game')
+        const [downloadResult] = await Promise.allSettled([
+          invoke('download_game'),
+          simulatedDownload,
+        ])
+
+        if (downloadResult.status === 'fulfilled') {
+          setStatus('ready')
           setStatusText('游戏下载完成，可以开始冒险了')
-        } catch (error) {
-          console.error('下载失败:', error)
+        } else {
+          console.error('下载失败:', downloadResult.reason)
+          setStatus('ready')
           setStatusText('游戏下载失败，请检查网络后重试')
         }
+      } else {
+        await simulatedDownload
+        setStatus('ready')
+        setStatusText('游戏下载完成，可以开始冒险了')
       }
     }
     ensureGameInstalled()
@@ -175,20 +224,29 @@ export default function App() {
               <Gamepad2 size={22} strokeWidth={2} />
             </div>
             <div>
-              <p className="deck-state">{isPlaying ? '游戏正在运行' : '已准备就绪'}</p>
-              <p className="deck-hint">{isPlaying ? '愿你的冒险一切顺利' : '随时可以开始新的冒险'}</p>
+              <p className="deck-state">{isDownloading ? '游戏下载中' : isPlaying ? '游戏正在运行' : '已准备就绪'}</p>
+              <p className="deck-hint">{isDownloading ? '正在准备你的冒险世界' : isPlaying ? '愿你的冒险一切顺利' : '随时可以开始新的冒险'}</p>
             </div>
           </div>
-          <h2>{isPlaying ? '愿你的冒险一切顺利' : '准备好出发了吗？'}</h2>
+          <h2>{isDownloading ? '正在准备游戏...' : isPlaying ? '愿你的冒险一切顺利' : '准备好出发了吗？'}</h2>
           <p className="deck-copy">
-            {isPlaying ? '游戏正在运行。' : '点击下方按钮，即刻进入游戏。'}
+            {isDownloading ? '游戏下载完成后，即可开始冒险。' : isPlaying ? '游戏正在运行。' : '点击下方按钮，即刻进入游戏。'}
           </p>
 
           <div className="launch-divider"></div>
 
-          <button className={`launch-button${isPlaying ? ' running' : ''}`} type="button" onClick={startGame}>
-            {isPlaying ? <Square size={18} fill="currentColor" /> : <Play size={20} fill="currentColor" />}
-            <span>{isPlaying ? '结束游戏' : '开始游戏'}</span>
+          <button
+            className={`launch-button${isPlaying ? ' running' : ''}${isDownloading ? ' downloading' : ''}`}
+            type="button"
+            onClick={startGame}
+            disabled={isDownloading}
+            aria-busy={isDownloading}
+          >
+            {isDownloading && <DownloadWaveSvg />}
+            <span className="launch-button-content">
+              {isPlaying ? <Square size={18} fill="currentColor" /> : !isDownloading && <Play size={20} fill="currentColor" />}
+              <span>{isDownloading ? '下载' : isPlaying ? '结束游戏' : '启动游戏'}</span>
+            </span>
           </button>
           <p className="launch-status">
             <span className={isPlaying ? 'running' : ''}></span>{statusText}

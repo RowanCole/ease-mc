@@ -268,6 +268,8 @@ button {
 }
 
 .launch-button {
+  position: relative;
+  isolation: isolate;
   display: inline-flex;
   width: 100%;
   min-height: 58px;
@@ -281,9 +283,19 @@ button {
   border-radius: 5px;
   box-shadow: 0 12px 26px rgba(109, 169, 52, 0.25);
   cursor: pointer;
+  overflow: hidden;
   font-size: 16px;
   font-weight: 850;
   transition: background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.launch-button-content {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
 }
 
 .launch-button:hover {
@@ -300,6 +312,98 @@ button {
   color: #382006;
   background: var(--amber);
   box-shadow: 0 12px 26px rgba(223, 143, 52, 0.22);
+}
+
+.launch-button.downloading {
+  color: #edf9ff;
+  background: #071a27;
+  border-color: rgba(151, 224, 245, 0.8);
+  box-shadow: inset 0 0 0 1px rgba(151, 224, 245, 0.16), 0 12px 26px rgba(3, 19, 30, 0.28);
+  cursor: wait;
+}
+
+.launch-button.downloading:hover,
+.launch-button.downloading:active {
+  background: #071a27;
+  box-shadow: inset 0 0 0 1px rgba(151, 224, 245, 0.16), 0 12px 26px rgba(3, 19, 30, 0.28);
+  transform: none;
+}
+
+.download-wave-svg {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: visible;
+  background: #54b7d8;
+  box-shadow: inset 0 10px 18px rgba(213, 248, 255, 0.18);
+  pointer-events: none;
+  transform: translateY(100%);
+  will-change: transform;
+  animation: download-wave-fill 100s linear forwards;
+}
+
+.download-wave-layer {
+  position: absolute;
+  bottom: calc(100% - 9px);
+  left: 0;
+  width: 200%;
+  height: 28px;
+  overflow: visible;
+  pointer-events: none;
+  transform-origin: 0 50%;
+  will-change: transform;
+}
+
+.download-wave-layer--back {
+  z-index: 1;
+  animation: svg-wave-flow-left 16s linear infinite;
+}
+
+.download-wave-layer--mid {
+  z-index: 2;
+  animation: svg-wave-flow-right 11s linear -3s infinite;
+}
+
+.download-wave-layer--front {
+  z-index: 3;
+  animation: svg-wave-flow-left 7.5s linear -1.5s infinite;
+}
+
+.download-wave-crest {
+  fill: none;
+  stroke: rgba(224, 250, 255, 0.75);
+  stroke-linecap: round;
+  stroke-width: 3;
+}
+
+@keyframes download-wave-fill {
+  0% {
+    transform: translateY(100%);
+  }
+
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes svg-wave-flow-left {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes svg-wave-flow-right {
+  from {
+    transform: translateX(-50%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
 }
 
 .launch-button:focus-visible {
