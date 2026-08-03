@@ -9,6 +9,7 @@ use tracing::{error, info};
 use futures_util::StreamExt;
 use tokio::io::AsyncWriteExt;
 
+
 static GAME: Mutex<Option<Child>> = Mutex::new(None);
 
 #[tauri::command]
@@ -115,6 +116,7 @@ fn get_config(key: &str) -> Result<String, String> {
         .ok_or_else(|| format!("config.json 缺少 {} 字段", key))
 }
 
+#[tauri::command]
 fn set_config(key: &str, value: &str) -> Result<(), String> {
     let mut json: serde_json::Value = if std::path::Path::new("config.json").exists() {
         let content = std::fs::read_to_string("config.json")
@@ -137,8 +139,9 @@ async fn download_game() {
     let client = Client::new();
 
     let offset = tokio::fs::metadata("game.zip").await.map(|m| m.len() as u64).unwrap_or(0) as u64;
+    let server_url = get_config("serverUrl").unwrap();
     let response = client
-        .get("http://localhost:3000/game.zip")
+        .get(format!("{}/game.zip", server_url))
         .header("Range", format!("bytes={}-", offset))
         .send()
         .await
@@ -162,17 +165,26 @@ async fn download_game() {
     };
 
     let mut stream = response.bytes_stream();
-    set_config("gameIsInstalled", "downloading").unwrap();
     while let Some(chunk) = stream.next().await {
         let chunk = chunk.unwrap();
         file.write_all(&chunk).await.unwrap();
     }
     file.flush().await.unwrap();
 
-    set_config("gameIsInstalled", "installed").unwrap();
+
     info!("Download completed");
+    info!("Starting unzip game");
 
-
+    drop(file);
+    let std_file = std::fs::File::open("game.zip").unwrap();
+    tokio::task::spawn_blocking(move || {
+        let mut zip = zip::ZipArchive::new(std_file).unwrap();
+        zip.extract("./").unwrap();
+    })
+    .await
+    .unwrap();
+    info!("Game unzipped");
+    set_config("gameIsInstalled", "true").unwrap();
 }
 
 #[cfg(test)]

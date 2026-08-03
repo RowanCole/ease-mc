@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { Bot, Box, Gamepad2, Play, SendHorizontal, Square, X } from 'lucide-react'
 import './App.css'
@@ -10,6 +10,9 @@ const gameInfo = {
 }
 
 const quickPrompts = ['新手应该先做什么？', '怎么找到钻石？', '下界要注意什么？']
+
+// 防止 React StrictMode 开发模式下重复触发下载
+let installCheckStarted = false
 
 function getAssistantReply(message) {
   const question = message.toLowerCase()
@@ -53,6 +56,34 @@ export default function App() {
   const chatListRef = useRef(null)
 
   const isPlaying = status === 'playing'
+
+  // 应用启动时检查游戏是否已安装，未安装则自动下载
+  useEffect(() => {
+    async function ensureGameInstalled() {
+      if (installCheckStarted) return
+      installCheckStarted = true
+
+      let installed = ''
+      try {
+        installed = await invoke('get_config', { key: 'gameIsInstalled' })
+      } catch (error) {
+        // 配置文件不存在等情况视为未安装
+        console.error('读取配置失败:', error)
+      }
+
+      if (installed === 'false') {
+        setStatusText('正在下载游戏，请稍候')
+        try {
+          await invoke('download_game')
+          setStatusText('游戏下载完成，可以开始冒险了')
+        } catch (error) {
+          console.error('下载失败:', error)
+          setStatusText('游戏下载失败，请检查网络后重试')
+        }
+      }
+    }
+    ensureGameInstalled()
+  }, [])
 
   function scrollChatToEnd() {
     requestAnimationFrame(() => {

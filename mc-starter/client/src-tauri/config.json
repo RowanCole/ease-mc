@@ -1,3 +1,4 @@
 {
-  "gameIsInstalled": "false"
+  "gameIsInstalled": "true",
+  "serverUrl": "http://localhost:3000"
 }
