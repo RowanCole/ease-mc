@@ -1,15 +1,24 @@
 use crate::utils::collect_jars;
 use std::process::{Child, Command};
 use std::sync::Mutex;
+use std::time::Duration;
+use tauri::{AppHandle, Emitter};
 use tracing::{error, info};
+
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
+
+/// Windows flag: prevents the spawned process from creating a console window
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 static GAME: Mutex<Option<Child>> = Mutex::new(None);
 
 #[tauri::command]
-pub fn launch_game() -> Result<(), String> {
+pub fn launch_game(app: AppHandle) -> Result<(), String> {
     let cwd = std::env::current_dir().unwrap().join("game");
     let minecraft_path = cwd.join(".minecraft");
-    let java = cwd.join("jdk-21.0.11").join("bin").join("java.exe");
+    let java = cwd.join("java").join("bin").join("java.exe");
     println!("cwd: {:?}", cwd);
     println!("minecraft_path: {:?}", minecraft_path);
     println!("java: {:?}", java.to_str().unwrap());
@@ -59,12 +68,47 @@ pub fn launch_game() -> Result<(), String> {
             "release",
         ])
         .current_dir(&minecraft_path)
+        // Hide the console window when launching the game on Windows
+        .creation_flags(CREATE_NO_WINDOW)
         .spawn()
         .map_err(|e| format!("Failed to launch game: {}", e))?;
 
-    println!("Game process started with PID: {}", game.id());
+    let pid = game.id();
+    println!("Game process started with PID: {}", pid);
 
     *GAME.lock().map_err(|e| e.to_string())? = Some(game);
+
+    // Monitor the game process; notify the frontend when it exits on its own
+    std::thread::spawn(move || loop {
+        std::thread::sleep(Duration::from_secs(1));
+        let exited: bool = {
+            let mut guard = match GAME.lock() {
+                Ok(guard) => guard,
+                Err(_) => continue,
+            };
+            match guard.as_mut() {
+                Some(child) => match child.try_wait() {
+                    Ok(Some(_)) => {
+                        *guard = None;
+                        true
+                    }
+                    Ok(None) => false,
+                    Err(_) => {
+                        *guard = None;
+                        true
+                    }
+                },
+                // The process was closed via close_game(); stop monitoring
+                None => break,
+            }
+        };
+        if exited {
+            let _ = app.emit("game-exited", ());
+            info!("Game process exited (PID: {})", pid);
+            break;
+        }
+    });
+
     Ok(())
 }
 

@@ -3,6 +3,7 @@
 jdk-21.0.11
 game
 game.zip
+data
 
 # ===================== 依赖 =====================
 node_modules
@@ -32,6 +33,8 @@ client/src-tauri/gen/
 *.key
 
 # ===================== Golang server 子项目 =====================
+# Go 服务器运行时数据目录（存放 game.zip 等下载文件）
+server/golang/data/
 server/golang/bin/
 server/golang/*.exe
 server/golang/*.exe~

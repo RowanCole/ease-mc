@@ -6,17 +6,23 @@ use tokio::io::AsyncWriteExt;
 use tracing::info;
 
 #[tauri::command]
-pub async fn download_game(app: tauri::AppHandle) {
+pub async fn download_game(app: tauri::AppHandle) -> Result<(), String> {
     let client = Client::new();
 
     let mut offset = tokio::fs::metadata("game.zip").await.map(|m| m.len() as u64).unwrap_or(0) as u64;
     let server_url = get_config("serverUrl").unwrap();
-    let response = client
+    let response = match client
         .get(format!("{}/game.zip", server_url))
         .header("Range", format!("bytes={}-", offset))
         .send()
         .await
-        .unwrap();
+    {
+        Ok(response) => response,
+        Err(e) => {
+            let _ = app.emit("server-connection-failed", e.to_string());
+            return Err(format!("服务器连接失败: {}", e));
+        }
+    };
 
     let mut file_len: u64 = 0;
 
@@ -60,6 +66,9 @@ pub async fn download_game(app: tauri::AppHandle) {
     file.flush().await.unwrap();
 
     info!("Download completed");
+    app.emit("extract-start", ())
+        .map_err(|e| format!("发送事件失败: {}", e))
+        .unwrap();
     info!("Starting unzip game");
 
     drop(file);
@@ -72,4 +81,5 @@ pub async fn download_game(app: tauri::AppHandle) {
     .unwrap();
     info!("Game unzipped");
     set_config("gameIsInstalled", "true").unwrap();
+    Ok(())
 }

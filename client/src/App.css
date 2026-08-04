@@ -411,6 +411,37 @@ button {
   outline-offset: 3px;
 }
 
+.connection-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 9px 12px;
+  color: #ffd3bd;
+  background: rgba(255, 96, 40, 0.1);
+  border: 1px solid rgba(255, 122, 69, 0.38);
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.connection-error button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  padding: 3px;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.connection-error button:hover {
+  background: rgba(255, 122, 69, 0.22);
+}
+
 .launch-status {
   display: inline-flex;
   align-items: center;

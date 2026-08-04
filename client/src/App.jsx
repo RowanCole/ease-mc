@@ -88,6 +88,9 @@ export default function App() {
   const [status, setStatus] = useState('downloading')
   const [statusText, setStatusText] = useState('游戏下载中...')
   const [downloadPercent, setDownloadPercent] = useState(0)
+  const [isExtracting, setIsExtracting] = useState(false)
+  const [serverError, setServerError] = useState(false)
+  const [needDownload, setNeedDownload] = useState(false)
   const [showChat, setShowChat] = useState(false)
   const [draftMessage, setDraftMessage] = useState('')
   const [isReplying, setIsReplying] = useState(false)
@@ -103,6 +106,45 @@ export default function App() {
   const isPlaying = status === 'playing'
   const isDownloading = status === 'downloading'
 
+  // 下载并解压游戏，启动检查与手动重试共用
+  async function downloadGame() {
+    setServerError(false)
+    setStatus('downloading')
+    setStatusText('游戏下载中...')
+    setDownloadPercent(0)
+
+    const unlistenProgress = await listen('download-progress', (event) => {
+      setDownloadPercent(event.payload.percent)
+    })
+    // 监听解压事件，解压时切换按钮文案与颜色
+    const unlistenExtract = await listen('extract-start', () => {
+      setIsExtracting(true)
+      setStatusText('正在解压...')
+    })
+    // 监听服务器连接失败事件
+    const unlistenConnection = await listen('server-connection-failed', () => {
+      setServerError(true)
+    })
+
+    try {
+      await invoke('download_game')
+      setNeedDownload(false)
+      setStatus('ready')
+      setStatusText('游戏下载完成，可以开始冒险了')
+      setDownloadPercent(100)
+    } catch (error) {
+      console.error('下载失败:', error)
+      setNeedDownload(true)
+      setStatus('ready')
+      setStatusText('游戏下载失败，请检查网络后重试')
+    } finally {
+      setIsExtracting(false)
+      unlistenProgress()
+      unlistenExtract()
+      unlistenConnection()
+    }
+  }
+
   // 应用启动时检查游戏是否已安装，未安装则自动下载
   useEffect(() => {
     async function ensureGameInstalled() {
@@ -117,29 +159,34 @@ export default function App() {
       }
 
       if (installed === 'false') {
-        // 监听下载进度事件
-        const unlisten = await listen('download-progress', (event) => {
-          setDownloadPercent(event.payload.percent)
-        })
-
-        try {
-          await invoke('download_game')
-          setStatus('ready')
-          setStatusText('游戏下载完成，可以开始冒险了')
-          setDownloadPercent(100)
-        } catch (error) {
-          console.error('下载失败:', error)
-          setStatus('ready')
-          setStatusText('游戏下载失败，请检查网络后重试')
-        } finally {
-          unlisten()
-        }
+        setNeedDownload(true)
+        await downloadGame()
       } else {
         setStatus('ready')
         setStatusText('游戏下载完成，可以开始冒险了')
       }
     }
     ensureGameInstalled()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // 游戏进程被手动关闭时，恢复启动器为可开始状态
+  useEffect(() => {
+    let cancelled = false
+    let unlisten
+
+    listen('game-exited', () => {
+      if (cancelled) return
+      setStatus('ready')
+      setStatusText('准备开始冒险')
+    }).then((fn) => {
+      unlisten = fn
+    })
+
+    return () => {
+      cancelled = true
+      unlisten?.()
+    }
   }, [])
 
   function scrollChatToEnd() {
@@ -178,6 +225,11 @@ export default function App() {
         console.error('Close failed:', error)
         setStatusText('暂时无法结束游戏')
       }
+      return
+    }
+
+    if (needDownload) {
+      await downloadGame()
       return
     }
 
@@ -232,19 +284,19 @@ export default function App() {
               <Gamepad2 size={22} strokeWidth={2} />
             </div>
             <div>
-              <p className="deck-state">{isDownloading ? '游戏下载中' : isPlaying ? '游戏正在运行' : '已准备就绪'}</p>
-              <p className="deck-hint">{isDownloading ? `下载进度 ${downloadPercent.toFixed(1)}%` : isPlaying ? '愿你的冒险一切顺利' : '随时可以开始新的冒险'}</p>
+              <p className="deck-state">{isDownloading ? '游戏下载中' : isPlaying ? '游戏正在运行' : needDownload ? '游戏未安装' : '已准备就绪'}</p>
+              <p className="deck-hint">{isDownloading ? `下载进度 ${downloadPercent.toFixed(1)}%` : isPlaying ? '愿你的冒险一切顺利' : serverError ? '服务器连接失败' : needDownload ? '游戏尚未安装' : '随时可以开始新的冒险'}</p>
             </div>
           </div>
-          <h2>{isDownloading ? '正在准备游戏...' : isPlaying ? '愿你的冒险一切顺利' : '准备好出发了吗？'}</h2>
+          <h2>{isDownloading ? '正在准备游戏...' : isPlaying ? '愿你的冒险一切顺利' : needDownload ? '游戏尚未安装' : '准备好出发了吗？'}</h2>
           <p className="deck-copy">
-            {isDownloading ? '游戏下载完成后，即可开始冒险。' : isPlaying ? '游戏正在运行。' : '点击下方按钮，即刻进入游戏。'}
+            {isDownloading ? '游戏下载完成后，即可开始冒险。' : isPlaying ? '游戏正在运行。' : needDownload ? '点击下方按钮，重新下载并安装游戏。' : '点击下方按钮，即刻进入游戏。'}
           </p>
 
           <div className="launch-divider"></div>
 
           <button
-            className={`launch-button${isPlaying ? ' running' : ''}${isDownloading ? ' downloading' : ''}`}
+            className={`launch-button${isPlaying || isExtracting ? ' running' : ''}${isDownloading && !isExtracting ? ' downloading' : ''}`}
             type="button"
             onClick={startGame}
             disabled={isDownloading}
@@ -253,7 +305,7 @@ export default function App() {
             {isDownloading && <DownloadWaveSvg percent={downloadPercent} />}
             <span className="launch-button-content">
               {isPlaying ? <Square size={18} fill="currentColor" /> : !isDownloading && <Play size={20} fill="currentColor" />}
-              <span>{isDownloading ? '游戏下载中...' : isPlaying ? '结束游戏' : '启动游戏'}</span>
+              <span>{isExtracting ? '正在解压...' : isDownloading ? '游戏下载中...' : needDownload ? '下载游戏' : isPlaying ? '结束游戏' : '启动游戏'}</span>
             </span>
           </button>
           <p className="launch-status">
