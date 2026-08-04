@@ -4,8 +4,12 @@
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, fmt};
+use dotenv::dotenv;
+
 
 fn main() {
+
+    dotenv().expect("环境加载失败");
 
     tracing_subscriber::registry()
         .with(

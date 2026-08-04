@@ -20,7 +20,6 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
-serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 reqwest = { version = "0.12", features = ["stream"] }
 tauri-plugin-store = "2"
@@ -29,5 +28,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "chrono"] }
 tokio = { version = "1", features = ["fs", "io-util"] }
 futures-util = "0.3"
 zip = "0.5"
+async-openai = { version = "0.41.3", features = ["chat-completion"] }
+dotenv = "0.15.0"
 
 
