@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import { Bot, Box, Gamepad2, Play, SendHorizontal, Square, X } from 'lucide-react'
 import './App.css'
 
@@ -10,7 +11,6 @@ const gameInfo = {
 }
 
 const quickPrompts = ['新手应该先做什么？', '怎么找到钻石？', '下界要注意什么？']
-const simulatedDownloadDuration = 100_000
 
 // 防止 React StrictMode 开发模式下重复触发下载
 let installCheckStarted = false
@@ -41,9 +41,16 @@ function getAssistantReply(message) {
   return '我可以帮你聊生存技巧、合成思路、探索路线和联机玩法。换个问法再告诉我你的困惑吧。'
 }
 
-function DownloadWaveSvg() {
+function DownloadWaveSvg({ percent }) {
   return (
-    <span className="download-wave-svg" aria-hidden="true">
+    <span
+      className="download-wave-svg"
+      aria-hidden="true"
+      style={{
+        animation: 'none',
+        transform: `translateY(${100 - percent}%)`,
+      }}
+    >
       <svg className="download-wave-layer download-wave-layer--back" viewBox="0 0 2000 100" preserveAspectRatio="none">
         <defs>
           <linearGradient id="download-wave-back" x1="0" y1="0" x2="0" y2="1">
@@ -80,6 +87,7 @@ function DownloadWaveSvg() {
 export default function App() {
   const [status, setStatus] = useState('downloading')
   const [statusText, setStatusText] = useState('游戏下载中...')
+  const [downloadPercent, setDownloadPercent] = useState(0)
   const [showChat, setShowChat] = useState(false)
   const [draftMessage, setDraftMessage] = useState('')
   const [isReplying, setIsReplying] = useState(false)
@@ -101,32 +109,32 @@ export default function App() {
       if (installCheckStarted) return
       installCheckStarted = true
 
-      // 动画从开屏立即开始，避免配置读取期间闪现启动按钮。
-      const simulatedDownload = new Promise((resolve) => window.setTimeout(resolve, simulatedDownloadDuration))
       let installed = ''
       try {
         installed = await invoke('get_config', { key: 'gameIsInstalled' })
       } catch (error) {
-        // 配置文件不存在等情况视为未安装
         console.error('读取配置失败:', error)
       }
 
       if (installed === 'false') {
-        const [downloadResult] = await Promise.allSettled([
-          invoke('download_game'),
-          simulatedDownload,
-        ])
+        // 监听下载进度事件
+        const unlisten = await listen('download-progress', (event) => {
+          setDownloadPercent(event.payload.percent)
+        })
 
-        if (downloadResult.status === 'fulfilled') {
+        try {
+          await invoke('download_game')
           setStatus('ready')
           setStatusText('游戏下载完成，可以开始冒险了')
-        } else {
-          console.error('下载失败:', downloadResult.reason)
+          setDownloadPercent(100)
+        } catch (error) {
+          console.error('下载失败:', error)
           setStatus('ready')
           setStatusText('游戏下载失败，请检查网络后重试')
+        } finally {
+          unlisten()
         }
       } else {
-        await simulatedDownload
         setStatus('ready')
         setStatusText('游戏下载完成，可以开始冒险了')
       }
@@ -225,7 +233,7 @@ export default function App() {
             </div>
             <div>
               <p className="deck-state">{isDownloading ? '游戏下载中' : isPlaying ? '游戏正在运行' : '已准备就绪'}</p>
-              <p className="deck-hint">{isDownloading ? '正在准备你的冒险世界' : isPlaying ? '愿你的冒险一切顺利' : '随时可以开始新的冒险'}</p>
+              <p className="deck-hint">{isDownloading ? `下载进度 ${downloadPercent.toFixed(1)}%` : isPlaying ? '愿你的冒险一切顺利' : '随时可以开始新的冒险'}</p>
             </div>
           </div>
           <h2>{isDownloading ? '正在准备游戏...' : isPlaying ? '愿你的冒险一切顺利' : '准备好出发了吗？'}</h2>
@@ -242,10 +250,10 @@ export default function App() {
             disabled={isDownloading}
             aria-busy={isDownloading}
           >
-            {isDownloading && <DownloadWaveSvg />}
+            {isDownloading && <DownloadWaveSvg percent={downloadPercent} />}
             <span className="launch-button-content">
               {isPlaying ? <Square size={18} fill="currentColor" /> : !isDownloading && <Play size={20} fill="currentColor" />}
-              <span>{isDownloading ? '下载' : isPlaying ? '结束游戏' : '启动游戏'}</span>
+              <span>{isDownloading ? '游戏下载中...' : isPlaying ? '结束游戏' : '启动游戏'}</span>
             </span>
           </button>
           <p className="launch-status">

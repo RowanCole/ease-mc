@@ -4,6 +4,7 @@ mod utils;
 use reqwest::Client;
 use utils::collect_jars;
 use std::process::{Child, Command};
+use tauri::Emitter;
 use std::sync::Mutex;
 use tracing::{error, info};
 use futures_util::StreamExt;
@@ -135,10 +136,10 @@ fn set_config(key: &str, value: &str) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn download_game() {
+async fn download_game(app: tauri::AppHandle) {
     let client = Client::new();
 
-    let offset = tokio::fs::metadata("game.zip").await.map(|m| m.len() as u64).unwrap_or(0) as u64;
+    let mut offset = tokio::fs::metadata("game.zip").await.map(|m| m.len() as u64).unwrap_or(0) as u64;
     let server_url = get_config("serverUrl").unwrap();
     let response = client
         .get(format!("{}/game.zip", server_url))
@@ -147,11 +148,22 @@ async fn download_game() {
         .await
         .unwrap();
     
+    let mut file_len: u64 = 0;
+
     let mut file = match response.status().as_u16() {
         200 => {
+            file_len = response.headers().get("content-length").unwrap().to_str().unwrap().parse().unwrap();
             tokio::fs::File::create("game.zip").await.unwrap()
         }
         206 => {
+            file_len = response.headers().get(reqwest::header::CONTENT_RANGE)
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.rsplit('/').next())
+            .map(|v| v.parse::<u64>().unwrap())
+            .unwrap_or(0);
+        
+            file_len += offset;
+            file_len = file_len as u64;
             tokio::fs::OpenOptions::new()
                 .create(true)
                 .append(true)
@@ -168,6 +180,12 @@ async fn download_game() {
     while let Some(chunk) = stream.next().await {
         let chunk = chunk.unwrap();
         file.write_all(&chunk).await.unwrap();
+        offset += chunk.len() as u64;
+        app.emit("download-progress", serde_json::json!({
+        "downloaded": offset,
+        "total": file_len,
+        "percent": offset as f64 / file_len as f64 * 100.0,
+    })).map_err(|e| format!("发送事件失败: {}", e)).unwrap();
     }
     file.flush().await.unwrap();
 
