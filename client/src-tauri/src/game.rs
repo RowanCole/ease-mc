@@ -36,40 +36,42 @@ pub fn launch_game(app: AppHandle) -> Result<(), String> {
     classpath.push("versions/1.21.1/1.21.1.jar".to_string());
     let cp = classpath.join(";");
 
-    let game = Command::new(java.to_str().unwrap())
-        .args([
-            "-XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump",
-            "-Djava.library.path=natives",
-            "-Djna.tmpdir=natives",
-            "-Dorg.lwjgl.system.SharedLibraryExtractPath=natives",
-            "-Dio.netty.native.workdir=natives",
-            "-Dminecraft.launcher.brand=manual",
-            "-Dminecraft.launcher.version=1.21.1",
-            "-cp",
-            &cp,
-            "net.minecraft.client.main.Main",
-            "--username",
-            "Steve",
-            "--version",
-            "1.21.1",
-            "--gameDir",
-            ".",
-            "--assetsDir",
-            "assets",
-            "--assetIndex",
-            "17",
-            "--uuid",
-            "00000000-0000-0000-0000-000000000000",
-            "--accessToken",
-            "0",
-            "--userType",
-            "mojang",
-            "--versionType",
-            "release",
-        ])
-        .current_dir(&minecraft_path)
-        // Hide the console window when launching the game on Windows
-        .creation_flags(CREATE_NO_WINDOW)
+    let mut game_cmd = Command::new(java.to_str().unwrap());
+    game_cmd.args([
+        "-XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump",
+        "-Djava.library.path=natives",
+        "-Djna.tmpdir=natives",
+        "-Dorg.lwjgl.system.SharedLibraryExtractPath=natives",
+        "-Dio.netty.native.workdir=natives",
+        "-Dminecraft.launcher.brand=manual",
+        "-Dminecraft.launcher.version=1.21.1",
+        "-cp",
+        &cp,
+        "net.minecraft.client.main.Main",
+        "--username",
+        "Steve",
+        "--version",
+        "1.21.1",
+        "--gameDir",
+        ".",
+        "--assetsDir",
+        "assets",
+        "--assetIndex",
+        "17",
+        "--uuid",
+        "00000000-0000-0000-0000-000000000000",
+        "--accessToken",
+        "0",
+        "--userType",
+        "mojang",
+        "--versionType",
+        "release",
+    ]);
+    game_cmd.current_dir(&minecraft_path);
+    // Hide the console window when launching the game on Windows
+    #[cfg(windows)]
+    game_cmd.creation_flags(CREATE_NO_WINDOW);
+    let game = game_cmd
         .spawn()
         .map_err(|e| format!("Failed to launch game: {}", e))?;
 

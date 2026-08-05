@@ -66,5 +66,6 @@ $RECYCLE.BIN/
 *.log
 tmp/
 temp/
+download/
 *.tmp
 *.bak

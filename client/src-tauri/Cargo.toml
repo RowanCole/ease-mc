@@ -28,7 +28,8 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "chrono"] }
 tokio = { version = "1", features = ["fs", "io-util"] }
 futures-util = "0.3"
 zip = "0.5"
+flate2 = "1"
+tar = "0.4"
 async-openai = { version = "0.41.3", features = ["chat-completion"] }
 dotenv = "0.15.0"
-
 
