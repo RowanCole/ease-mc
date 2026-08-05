@@ -1,6 +1,7 @@
 use futures_util::StreamExt;
 use std::env;
 use tauri::Emitter;
+use tracing::{debug, info, warn};
 
 async fn stream_chat(messages: Vec<String>, mut on_text: impl FnMut(&str)) -> Result<String, String> {
     use async_openai::config::OpenAIConfig;
@@ -10,10 +11,11 @@ async fn stream_chat(messages: Vec<String>, mut on_text: impl FnMut(&str)) -> Re
     };
     use async_openai::Client;
 
+    let api_key = env::var("DEEPSEEK_API_KEY")
+        .map_err(|_| "缺少 DEEPSEEK_API_KEY 环境变量".to_string())?;
     let config = OpenAIConfig::new()
         .with_api_base("https://api.deepseek.com")
-        .with_api_key(env::var("DEEPSEEK_API_KEY")
-            .map_err(|_| "缺少 DEEPSEEK_API_KEY 环境变量".to_string())?);
+        .with_api_key(api_key);
 
     let client = Client::with_config(config);
 
@@ -31,15 +33,23 @@ async fn stream_chat(messages: Vec<String>, mut on_text: impl FnMut(&str)) -> Re
         ..Default::default()
     };
 
-    let mut stream = client.chat().create_stream(request).await.map_err(|e| e.to_string())?;
+    info!("调用 DeepSeek 模型 deepseek-v4-flash，消息数: {}", request.messages.len());
+    let mut stream = client.chat().create_stream(request).await.map_err(|e| {
+        warn!("DeepSeek 请求失败: {}", e);
+        e.to_string()
+    })?;
     let mut full = String::new();
     while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(|e| e.to_string())?;
+        let chunk = chunk.map_err(|e| {
+            warn!("DeepSeek 流式响应错误: {}", e);
+            e.to_string()
+        })?;
         if let Some(content) = chunk.choices.first().and_then(|c| c.delta.content.clone()) {
             full.push_str(&content);
             on_text(&content);
         }
     }
+    debug!("DeepSeek 回复完成，共 {} 字符", full.len());
     Ok(full)
 }
 

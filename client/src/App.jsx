@@ -89,7 +89,6 @@ export default function App() {
   const [statusText, setStatusText] = useState('游戏下载中...')
   const [downloadPercent, setDownloadPercent] = useState(0)
   const [isExtracting, setIsExtracting] = useState(false)
-  const [serverError, setServerError] = useState(false)
   const [needDownload, setNeedDownload] = useState(false)
   const [showChat, setShowChat] = useState(false)
   const [draftMessage, setDraftMessage] = useState('')
@@ -106,9 +105,8 @@ export default function App() {
   const isPlaying = status === 'playing'
   const isDownloading = status === 'downloading'
 
-  // 下载并解压游戏，启动检查与手动重试共用
+  // 下载游戏，启动检查与手动重试共用
   async function downloadGame() {
-    setServerError(false)
     setStatus('downloading')
     setStatusText('游戏下载中...')
     setDownloadPercent(0)
@@ -116,14 +114,10 @@ export default function App() {
     const unlistenProgress = await listen('download-progress', (event) => {
       setDownloadPercent(event.payload.percent)
     })
-    // 监听解压事件，解压时切换按钮文案与颜色
+    // 监听运行环境安装事件（JRE 下载解压阶段），切换按钮文案与颜色
     const unlistenExtract = await listen('extract-start', () => {
       setIsExtracting(true)
-      setStatusText('正在解压...')
-    })
-    // 监听服务器连接失败事件
-    const unlistenConnection = await listen('server-connection-failed', () => {
-      setServerError(true)
+      setStatusText('正在安装运行环境...')
     })
 
     try {
@@ -141,7 +135,6 @@ export default function App() {
       setIsExtracting(false)
       unlistenProgress()
       unlistenExtract()
-      unlistenConnection()
     }
   }
 
@@ -285,7 +278,7 @@ export default function App() {
             </div>
             <div>
               <p className="deck-state">{isDownloading ? '游戏下载中' : isPlaying ? '游戏正在运行' : needDownload ? '游戏未安装' : '已准备就绪'}</p>
-              <p className="deck-hint">{isDownloading ? `下载进度 ${downloadPercent.toFixed(1)}%` : isPlaying ? '愿你的冒险一切顺利' : serverError ? '服务器连接失败' : needDownload ? '游戏尚未安装' : '随时可以开始新的冒险'}</p>
+              <p className="deck-hint">{isDownloading ? `下载进度 ${downloadPercent.toFixed(1)}%` : isPlaying ? '愿你的冒险一切顺利' : needDownload ? '游戏尚未安装' : '随时可以开始新的冒险'}</p>
             </div>
           </div>
           <h2>{isDownloading ? '正在准备游戏...' : isPlaying ? '愿你的冒险一切顺利' : needDownload ? '游戏尚未安装' : '准备好出发了吗？'}</h2>

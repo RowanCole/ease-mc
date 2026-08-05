@@ -4,6 +4,9 @@ jdk-21.0.11
 game
 game.zip
 data
+# JRE 下载的压缩包（可从 Azul CDN 重新下载，无需入库）
+*.tar.gz
+*.zip
 
 # ===================== 依赖 =====================
 node_modules
@@ -50,6 +53,7 @@ server/golang/coverage.out
 .AppleDouble
 .LSOverride
 ._*
+__MACOSX
 Thumbs.db
 Desktop.ini
 $RECYCLE.BIN/

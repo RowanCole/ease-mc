@@ -1,9 +1,9 @@
-use crate::utils::collect_jars;
+use std::path::Path;
 use std::process::{Child, Command};
 use std::sync::Mutex;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter};
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
@@ -14,16 +14,37 @@ const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 static GAME: Mutex<Option<Child>> = Mutex::new(None);
 
+/// 递归收集 libraries 目录下所有 jar 文件，转换为相对路径后写入 jars。
+fn collect_jars(dir: &Path, base: &Path, jars: &mut Vec<String>) -> Result<(), String> {
+    for entry in std::fs::read_dir(dir).map_err(|e| format!("read_dir failed: {}", e))? {
+        let entry = entry.map_err(|e| format!("entry failed: {}", e))?;
+        let path = entry.path();
+        if path.is_dir() {
+            collect_jars(&path, base, jars)?;
+        } else if path.extension().and_then(|s| s.to_str()) == Some("jar") {
+            if let Ok(rel) = path.strip_prefix(base) {
+                jars.push(rel.to_string_lossy().replace('\\', "/"));
+            }
+        }
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub fn launch_game(app: AppHandle) -> Result<(), String> {
     let cwd = std::env::current_dir().unwrap().join("game");
     let minecraft_path = cwd.join(".minecraft");
-    let java = cwd.join("java").join("bin").join("java.exe");
-    println!("cwd: {:?}", cwd);
-    println!("minecraft_path: {:?}", minecraft_path);
-    println!("java: {:?}", java.to_str().unwrap());
+    // Windows 下 JRE 可执行文件带 .exe 后缀，macOS/Linux 不带
+    let java = cwd
+        .join("java")
+        .join("bin")
+        .join(if cfg!(windows) { "java.exe" } else { "java" });
+    debug!("cwd: {:?}", cwd);
+    debug!("minecraft_path: {:?}", minecraft_path);
+    debug!("java: {:?}", java.to_str().unwrap());
 
     if !minecraft_path.exists() {
+        error!(".minecraft 目录不存在: {:?}", minecraft_path);
         return Err(format!(".minecraft directory not found at {:?}", minecraft_path));
     }
 
@@ -34,9 +55,15 @@ pub fn launch_game(app: AppHandle) -> Result<(), String> {
         collect_jars(&lib_dir, &minecraft_path, &mut classpath)?;
     }
     classpath.push("versions/1.21.1/1.21.1.jar".to_string());
-    let cp = classpath.join(";");
+    debug!("classpath 共 {} 个 jar", classpath.len());
+    // Windows 用分号分隔 classpath，macOS/Linux 用冒号
+    let cp = classpath.join(if cfg!(windows) { ";" } else { ":" });
 
     let mut game_cmd = Command::new(java.to_str().unwrap());
+    // macOS 上 GLFW 要求 JVM 主线程必须是进程的第一个线程，否则启动即崩溃。
+    // 该参数仅 macOS JVM 支持，Windows 传入会报 "Unrecognized option"，故用 cfg 门控。
+    #[cfg(target_os = "macos")]
+    game_cmd.arg("-XstartOnFirstThread");
     game_cmd.args([
         "-XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump",
         "-Djava.library.path=natives",
@@ -76,7 +103,7 @@ pub fn launch_game(app: AppHandle) -> Result<(), String> {
         .map_err(|e| format!("Failed to launch game: {}", e))?;
 
     let pid = game.id();
-    println!("Game process started with PID: {}", pid);
+    info!("游戏进程已启动 (PID: {})", pid);
 
     *GAME.lock().map_err(|e| e.to_string())? = Some(game);
 
@@ -119,13 +146,20 @@ pub fn close_game() -> Result<(), String> {
     let child = GAME.lock().map_err(|e| e.to_string())?.take();
     if let Some(child) = child {
         let pid = child.id();
-        let output = Command::new("taskkill")
-            .args(["/PID", &pid.to_string(), "/T", "/F"])
-            .output()
-            .map_err(|e| format!("Failed to kill process tree: {}", e))?;
+        // Windows 用 taskkill 结束整个进程树；macOS/Linux 用 kill
+        let output = if cfg!(windows) {
+            Command::new("taskkill")
+                .args(["/PID", &pid.to_string(), "/T", "/F"])
+                .output()
+        } else {
+            Command::new("kill")
+                .args(["-9", &pid.to_string()])
+                .output()
+        }
+        .map_err(|e| format!("Failed to kill process tree: {}", e))?;
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            error!("taskkill error: {}", stderr);
+            error!("kill error: {}", stderr);
         }
     }
     info!("Game process closed");

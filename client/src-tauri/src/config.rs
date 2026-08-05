@@ -1,9 +1,13 @@
+use tracing::{debug, warn};
+
 #[tauri::command]
 pub fn init() -> Result<(), String> {
-    let config = get_config("gameIsInstalled");
-    match config {
+    match get_config("gameIsInstalled") {
         Ok(_) => Ok(()),
-        Err(e) => Ok(()),
+        Err(e) => {
+            warn!("初始化检查配置失败: {}", e);
+            Ok(())
+        }
     }
 }
 
@@ -13,14 +17,17 @@ pub fn get_config(key: &str) -> Result<String, String> {
         .map_err(|e| format!("读取配置文件失败: {}", e))?;
     let json: serde_json::Value = serde_json::from_str(&content)
         .map_err(|e| format!("解析配置文件失败: {}", e))?;
-    json[key]
+    let value = json[key]
         .as_str()
         .map(|s| s.to_string())
-        .ok_or_else(|| format!("config.json 缺少 {} 字段", key))
+        .ok_or_else(|| format!("config.json 缺少 {} 字段", key))?;
+    debug!("读取配置 {} = {}", key, value);
+    Ok(value)
 }
 
 #[tauri::command]
 pub fn set_config(key: &str, value: &str) -> Result<(), String> {
+    debug!("写入配置 {} = {}", key, value);
     let mut json: serde_json::Value = if std::path::Path::new("config.json").exists() {
         let content = std::fs::read_to_string("config.json")
             .map_err(|e| format!("读取配置文件失败: {}", e))?;

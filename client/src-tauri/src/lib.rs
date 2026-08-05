@@ -3,7 +3,7 @@ mod chat;
 mod config;
 mod download;
 mod game;
-mod utils;
+mod jre;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
