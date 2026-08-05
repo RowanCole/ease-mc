@@ -1,6 +1,6 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-use futures_util::StreamExt;
+use futures_util::stream::{self, StreamExt};
 use reqwest::Client;
 use tauri::Emitter;
 use tokio::io::AsyncWriteExt;
@@ -9,14 +9,61 @@ use tracing::{debug, info};
 use crate::config::set_config;
 use crate::jre::download_jre;
 
+/// 并发下载上限。Mojang CDN 对单连接限速，8 并发可让多个库文件并行拉取。
+const MAX_CONCURRENT_DOWNLOADS: usize = 8;
+
+/// 将 Mojang 官方 URL 替换为国内镜像（BMCLAPI），显著提升国内下载速度。
+/// 规则：域名替换为 bmclapi2.bangbang93.com，libraries 路径前缀为 /maven。
+fn mirror_url(url: &str) -> String {
+    if url.starts_with("https://libraries.minecraft.net/") {
+        url.replacen(
+            "https://libraries.minecraft.net/",
+            "https://bmclapi2.bangbang93.com/maven/",
+            1,
+        )
+    } else if url.starts_with("https://piston-data.mojang.com/") {
+        url.replacen(
+            "https://piston-data.mojang.com/",
+            "https://bmclapi2.bangbang93.com/",
+            1,
+        )
+    } else if url.starts_with("https://piston-meta.mojang.com/") {
+        url.replacen(
+            "https://piston-meta.mojang.com/",
+            "https://bmclapi2.bangbang93.com/",
+            1,
+        )
+    } else {
+        url.to_string()
+    }
+}
+
 /// 下载单个文件到目标路径，自动创建缺失的父目录。
+/// Mojang 官方地址会自动替换为镜像源以加速下载；
+/// 若镜像源缺失（404），则自动回退官方地址，保证文件不遗漏。
 pub async fn download_file(client: &Client, url: &str, dest: &Path) -> Result<(), String> {
-    debug!("开始下载: {} -> {}", url, dest.display());
     if let Some(parent) = dest.parent() {
         tokio::fs::create_dir_all(parent)
             .await
             .map_err(|e| format!("创建目录 {} 失败: {}", parent.display(), e))?;
     }
+
+    let mirrored = mirror_url(url);
+    if mirrored != url {
+        match download_from(client, &mirrored, dest).await {
+            Ok(()) => return Ok(()),
+            Err(e) => {
+                debug!("镜像下载失败，回退官方源: {}", e);
+            }
+        }
+    }
+
+    download_from(client, url, dest).await
+}
+
+/// 从指定 URL 下载单个文件到目标路径（不做镜像替换）。
+async fn download_from(client: &Client, url: &str, dest: &Path) -> Result<(), String> {
+    debug!("开始下载: {} -> {}", url, dest.display());
 
     let response = client
         .get(url)
@@ -42,6 +89,41 @@ pub async fn download_file(client: &Client, url: &str, dest: &Path) -> Result<()
         .map_err(|e| format!("刷新 {} 失败: {}", dest.display(), e))?;
     debug!("下载完成: {}", dest.display());
     Ok(())
+}
+
+/// 并发下载多个文件，限制最大并发数。
+///
+/// 所有任务都完成后统一返回；只要有一个失败即返回错误（已完成的文件保留）。
+/// `reqwest::Client` 内部共享连接池，`Clone` 后可在多任务中安全使用。
+async fn download_files_concurrent(
+    client: &Client,
+    tasks: Vec<(String, PathBuf)>,
+    max_concurrent: usize,
+) -> Result<(), String> {
+    let total = tasks.len();
+    info!("开始并发下载 {} 个文件（并发上限 {}）", total, max_concurrent);
+
+    let results: Vec<Result<(), String>> = stream::iter(tasks)
+        .map(|(url, dest)| {
+            let client = client.clone();
+            async move { download_file(&client, &url, &dest).await }
+        })
+        .buffer_unordered(max_concurrent)
+        .collect()
+        .await;
+
+    // 聚合失败信息
+    let errors: Vec<String> = results.into_iter().filter_map(|r| r.err()).collect();
+    if errors.is_empty() {
+        info!("全部 {} 个文件下载完成", total);
+        Ok(())
+    } else {
+        Err(format!(
+            "{} 个文件下载失败，第一个错误: {}",
+            errors.len(),
+            errors[0]
+        ))
+    }
 }
 
 /// 当前操作系统在 Minecraft 清单中的名称（osx / windows / linux）。
@@ -101,6 +183,9 @@ pub async fn download_game_files(
         os_name
     );
 
+    // 先收集全部下载任务，再统一并发下载
+    let mut tasks: Vec<(String, PathBuf)> = Vec::new();
+
     // 1. 第三方库
     let libraries = manifest["libraries"]
         .as_array()
@@ -116,7 +201,7 @@ pub async fn download_game_files(
             _ => continue,
         };
         let dest = minecraft_dir.join("libraries").join(path);
-        download_file(client, url, &dest).await?;
+        tasks.push((url.to_string(), dest));
     }
 
     // 2. 客户端主 jar
@@ -129,7 +214,7 @@ pub async fn download_game_files(
             .join(version_id)
             .join(format!("{}.jar", version_id));
         info!("下载客户端主 jar: {}", dest.display());
-        download_file(client, url, &dest).await?;
+        tasks.push((url.to_string(), dest));
     }
 
     // 3. 资源索引
@@ -140,7 +225,7 @@ pub async fn download_game_files(
             .join("indexes")
             .join(format!("{}.json", index_id));
         info!("下载资源索引: {}", dest.display());
-        download_file(client, url, &dest).await?;
+        tasks.push((url.to_string(), dest));
     }
 
     // 4. 日志配置文件
@@ -153,8 +238,10 @@ pub async fn download_game_files(
             .join("log_configs")
             .join(file_id);
         info!("下载日志配置: {}", dest.display());
-        download_file(client, url, &dest).await?;
+        tasks.push((url.to_string(), dest));
     }
+
+    download_files_concurrent(client, tasks, MAX_CONCURRENT_DOWNLOADS).await?;
 
     info!("游戏文件下载完成");
     Ok(())
