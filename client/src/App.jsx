@@ -15,32 +15,6 @@ const quickPrompts = ['新手应该先做什么？', '怎么找到钻石？', '�
 // 防止 React StrictMode 开发模式下重复触发下载
 let installCheckStarted = false
 
-function getAssistantReply(message) {
-  const question = message.toLowerCase()
-
-  if (question.includes('新手') || question.includes('开始') || question.includes('生存') || question.includes('怎么玩')) {
-    return '先收集木头，做出工作台和基础工具。天黑前准备好食物与临时住处，第一晚就会轻松很多。'
-  }
-
-  if (question.includes('钻石')) {
-    return '钻石通常出现在较深的地下。带上足够的火把、食物和铁镐，沿着洞穴或矿道慢慢探索会更安全。'
-  }
-
-  if (question.includes('下界')) {
-    return '进入下界前，先准备食物、金质装备和备用方块。那里地形危险，记得标记传送门的位置。'
-  }
-
-  if (question.includes('联机') || question.includes('朋友') || question.includes('一起')) {
-    return '和朋友一起玩时，可以先分工收集资源、建造基地和探索地图。把重要物资放进公共箱子会方便很多。'
-  }
-
-  if (question.includes('合成') || question.includes('工作台')) {
-    return '四个木板可以合成工作台。工作台能制作大部分常用物品，是开始冒险后的第一件重要工具。'
-  }
-
-  return '我可以帮你聊生存技巧、合成思路、探索路线和联机玩法。换个问法再告诉我你的困惑吧。'
-}
-
 function DownloadWaveSvg({ percent }) {
   return (
     <span
@@ -93,6 +67,7 @@ export default function App() {
   const [showChat, setShowChat] = useState(false)
   const [draftMessage, setDraftMessage] = useState('')
   const [isReplying, setIsReplying] = useState(false)
+  const [streamStarted, setStreamStarted] = useState(false)
   const [chatMessages, setChatMessages] = useState([
     {
       id: 1,
@@ -101,6 +76,8 @@ export default function App() {
     },
   ])
   const chatListRef = useRef(null)
+  // 记录当前流式输出的助手消息 id，用于逐字追加
+  const streamingAssistantIdRef = useRef(null)
 
   const isPlaying = status === 'playing'
   const isDownloading = status === 'downloading'
@@ -200,12 +177,59 @@ export default function App() {
     setChatMessages((prev) => [...prev, { id: Date.now(), role: 'user', text: content }])
     setDraftMessage('')
     setIsReplying(true)
+    setStreamStarted(false)
     scrollChatToEnd()
 
-    await new Promise((resolve) => window.setTimeout(resolve, 420))
-    setChatMessages((prev) => [...prev, { id: Date.now() + 1, role: 'assistant', text: getAssistantReply(content) }])
-    setIsReplying(false)
-    scrollChatToEnd()
+    let finished = false
+    let unlistenChunk
+    let unlistenDone
+
+    const finish = () => {
+      if (finished) return
+      finished = true
+      streamingAssistantIdRef.current = null
+      unlistenChunk?.()
+      unlistenDone?.()
+      setIsReplying(false)
+      scrollChatToEnd()
+    }
+
+    // 流式监听：首块到达时创建助手消息，后续逐字追加
+    unlistenChunk = await listen('chat-chunk', (event) => {
+      const chunk = event.payload
+      const assistantId = streamingAssistantIdRef.current
+      if (assistantId == null) {
+        const newId = Date.now()
+        streamingAssistantIdRef.current = newId
+        setStreamStarted(true)
+        setChatMessages((prev) => [...prev, { id: newId, role: 'assistant', text: chunk }])
+      } else {
+        setChatMessages((prev) =>
+          prev.map((m) => (m.id === assistantId ? { ...m, text: m.text + chunk } : m)),
+        )
+      }
+      scrollChatToEnd()
+    })
+    unlistenDone = await listen('chat-done', finish)
+
+    try {
+      await invoke('send_messages_to_mode', { message: content })
+      finish()
+    } catch (error) {
+      console.error('AI 请求失败:', error)
+      const assistantId = streamingAssistantIdRef.current
+      if (assistantId == null) {
+        setChatMessages((prev) => [
+          ...prev,
+          { id: Date.now(), role: 'assistant', text: '抱歉，AI 暂时无法回答，请稍后重试。' },
+        ])
+      } else {
+        setChatMessages((prev) =>
+          prev.map((m) => (m.id === assistantId ? { ...m, text: m.text + '（请求中断，请重试）' } : m)),
+        )
+      }
+      finish()
+    }
   }
 
   async function startGame() {
@@ -337,7 +361,7 @@ export default function App() {
                 <p>{message.text}</p>
               </div>
             ))}
-            {isReplying && (
+            {isReplying && !streamStarted && (
               <div className="chat-message assistant thinking" aria-label="游戏助手正在输入">
                 <span className="assistant-avatar"><Bot size={15} strokeWidth={2.2} /></span>
                 <p><i></i><i></i><i></i></p>
