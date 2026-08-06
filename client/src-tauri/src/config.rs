@@ -1,15 +1,4 @@
-use tracing::{debug, warn};
-
-#[tauri::command]
-pub fn init() -> Result<(), String> {
-    match get_config("gameIsInstalled") {
-        Ok(_) => Ok(()),
-        Err(e) => {
-            warn!("初始化检查配置失败: {}", e);
-            Ok(())
-        }
-    }
-}
+use tracing::{debug};
 
 #[tauri::command]
 pub fn get_config(key: &str) -> Result<String, String> {
