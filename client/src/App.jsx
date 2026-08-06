@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
+import ReactMarkdown from 'react-markdown'
 import { Bot, Box, Gamepad2, Play, SendHorizontal, Square, X } from 'lucide-react'
 import './App.css'
 
@@ -358,7 +359,13 @@ export default function App() {
                 {message.role === 'assistant' && (
                   <span className="assistant-avatar"><Bot size={15} strokeWidth={2.2} /></span>
                 )}
-                <p>{message.text}</p>
+                {message.role === 'assistant' ? (
+                  <div className="chat-bubble markdown">
+                    <ReactMarkdown>{message.text}</ReactMarkdown>
+                  </div>
+                ) : (
+                  <p>{message.text}</p>
+                )}
               </div>
             ))}
             {isReplying && !streamStarted && (
