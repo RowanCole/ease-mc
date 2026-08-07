@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use reqwest::Client;
+use tauri::Emitter;
 use tracing::{debug, info};
 
 use crate::download::download_file;
@@ -40,7 +41,15 @@ fn extract_archive(archive_path: &Path, dest_dir: &Path) -> Result<(), String> {
 /// 目标结构：
 /// - Windows: game/java/bin/java.exe
 /// - macOS:   game/java/bin/java（自动去掉解压后的 jdk-*/Contents/Home 层级）
-pub async fn download_jre(client: &Client, game_dir: &Path) -> Result<(), String> {
+///
+/// `progress_range` 为该步骤的进度区间（如 (85.0, 97.0)），由调用方统一规划，
+/// 避免与其他下载阶段的进度区间重叠。
+pub async fn download_jre(
+    client: &Client,
+    game_dir: &Path,
+    app: Option<&tauri::AppHandle>,
+    progress_range: (f64, f64),
+) -> Result<(), String> {
     let key = if cfg!(windows) { "winJrePath" } else { "macJrePath" };
     let url = crate::config::get_config(key)?;
     info!("开始下载 JRE（配置项: {}）", key);
@@ -48,7 +57,18 @@ pub async fn download_jre(client: &Client, game_dir: &Path) -> Result<(), String
     // 下载到临时文件（Windows 为 zip，macOS 为 tar.gz）
     let archive_name = if cfg!(windows) { ".jre-download.zip" } else { ".jre-download.tar.gz" };
     let archive_path = game_dir.join(archive_name);
-    download_file(client, &url, &archive_path).await?;
+    // JRE 是单文件，用响应 Content-Length 实时上报 progress_range 区间的平滑进度
+    let progress = app.map(|a| {
+        crate::download::ProgressCtx::new(a.clone(), progress_range.0, progress_range.1, 0)
+    });
+    download_file(client, &url, &archive_path, progress.as_ref()).await?;
+    // 兜底：Content-Length 缺失时进度可能未推进，强制收敛到区间终点
+    if let Some(app) = app {
+        let _ = app.emit(
+            "download-progress",
+            serde_json::json!({ "percent": progress_range.1 }),
+        );
+    }
 
     // 解压到临时目录，避免与 game 目录已有内容冲突
     let tmp_dir = game_dir.join(".jre_tmp");
@@ -100,7 +120,7 @@ mod tests {
     async fn download_jre_to_game_dir() {
         let client = Client::new();
         let game_dir = Path::new("game");
-        download_jre(&client, game_dir)
+        download_jre(&client, game_dir, None, (60.0, 90.0))
             .await
             .expect("下载 JRE 失败");
 

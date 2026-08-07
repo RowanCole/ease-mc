@@ -1,6 +1,6 @@
 {
-  "gameIsInstalled": "true",
+  "gameIsInstalled": "false",
   "macJrePath": "https://cdn.azul.com/zulu/bin/zulu21.52.15-ca-jre21.0.12-macosx_x64.tar.gz",
   "serverUrl": "http://localhost:3000",
-  "winJrePath": "https://cdn.azul.com/zulu/bin/zulu21.52.15-ca-jre21.0.12-win_x64.zip"
+  "winJrePath": "https://cdn.azul.com/zulu/bin/zulu21.52.15-ca-jre21.0.12-windows_x64.zip"
 }

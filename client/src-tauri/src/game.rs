@@ -32,7 +32,7 @@ fn collect_jars(dir: &Path, base: &Path, jars: &mut Vec<String>) -> Result<(), S
 
 #[tauri::command]
 pub fn launch_game(app: AppHandle) -> Result<(), String> {
-    let cwd = std::env::current_dir().unwrap().join("game");
+    let cwd = crate::config::app_dir().join("game");
     let minecraft_path = cwd.join(".minecraft");
     // Windows 下 JRE 可执行文件带 .exe 后缀，macOS/Linux 不带
     let java = cwd
