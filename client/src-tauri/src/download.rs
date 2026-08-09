@@ -38,7 +38,7 @@ fn mirror_url(url: &str) -> String {
     } else if url.starts_with("https://resources.download.minecraft.net/") {
         url.replacen(
             "https://resources.download.minecraft.net/",
-            "https://bmclapi2.bangbang93.com/assets/",
+            "https://bmclapi2.bangbang93.com/",
             1,
         )
     } else {
@@ -315,19 +315,49 @@ pub async fn download_game_files(
         tasks.push((url.to_string(), dest, size));
     }
 
-    // 3. 资源索引
+    // 3. 资源索引：先单独下载索引 JSON，再解析出全部资源对象清单
+    let index_id = manifest["assetIndex"]["id"].as_str().unwrap_or("index");
+    let index_dest = minecraft_dir
+        .join("assets")
+        .join("indexes")
+        .join(format!("{}.json", index_id));
     if let Some(url) = manifest["assetIndex"]["url"].as_str() {
-        let index_id = manifest["assetIndex"]["id"].as_str().unwrap_or("index");
-        let dest = minecraft_dir
-            .join("assets")
-            .join("indexes")
-            .join(format!("{}.json", index_id));
-        info!("下载资源索引: {}", dest.display());
-        let size = manifest["assetIndex"]["size"].as_u64().unwrap_or(0);
-        tasks.push((url.to_string(), dest, size));
+        info!("下载资源索引: {}", url);
+        download_file(client, url, &index_dest, None).await?;
     }
 
-    // 4. 日志配置文件
+    // 4. 解析资源索引，为每个资源对象生成下载任务（占大头，约 800MB+）
+    if index_dest.exists() {
+        let content = std::fs::read_to_string(&index_dest)
+            .map_err(|e| format!("读取资源索引失败: {}", e))?;
+        let index: serde_json::Value = serde_json::from_str(&content)
+            .map_err(|e| format!("解析资源索引失败: {}", e))?;
+        if let Some(objects) = index["objects"].as_object() {
+            let mut count = 0usize;
+            for (_name, obj) in objects {
+                let hash = obj["hash"].as_str().unwrap_or("");
+                if hash.len() < 2 {
+                    continue;
+                }
+                let url = format!(
+                    "https://resources.download.minecraft.net/{}/{}",
+                    &hash[..2],
+                    hash
+                );
+                let dest = minecraft_dir
+                    .join("assets")
+                    .join("objects")
+                    .join(&hash[..2])
+                    .join(hash);
+                let size = obj["size"].as_u64().unwrap_or(0);
+                tasks.push((url, dest, size));
+                count += 1;
+            }
+            info!("资源索引包含 {} 个资源对象", count);
+        }
+    }
+
+    // 5. 日志配置文件
     if let Some(url) = manifest["logging"]["client"]["file"]["url"].as_str() {
         let file_id = manifest["logging"]["client"]["file"]["id"]
             .as_str()
@@ -343,56 +373,8 @@ pub async fn download_game_files(
         tasks.push((url.to_string(), dest, size));
     }
 
-    download_files_concurrent(client, tasks, MAX_CONCURRENT_DOWNLOADS, app, (5.0, 50.0))
+    download_files_concurrent(client, tasks, MAX_CONCURRENT_DOWNLOADS, app, (5.0, 90.0))
         .await?;
-
-    // 5. 资源文件（必须等资源索引下载完成后才能读取其 objects 清单）
-    //    资源按 hash 存储于 assets/objects/{hash[0..2]}/{hash}，游戏按此路径加载，
-    //    若缺失会导致背景图、纹理、语言等资源加载失败（如全景图马赛克）。
-    let index_id = manifest["assetIndex"]["id"].as_str().unwrap_or("index");
-    let index_path = minecraft_dir
-        .join("assets")
-        .join("indexes")
-        .join(format!("{}.json", index_id));
-    if index_path.exists() {
-        let content = std::fs::read_to_string(&index_path)
-            .map_err(|e| format!("读取资源索引失败: {}", e))?;
-        let index: serde_json::Value = serde_json::from_str(&content)
-            .map_err(|e| format!("解析资源索引失败: {}", e))?;
-        let mut asset_tasks: Vec<(String, PathBuf, u64)> = Vec::new();
-        if let Some(objects) = index["objects"].as_object() {
-            for obj in objects.values() {
-                let hash = obj["hash"].as_str().unwrap_or("");
-                if hash.len() < 2 {
-                    continue;
-                }
-                let size = obj["size"].as_u64().unwrap_or(0);
-                let dest = minecraft_dir
-                    .join("assets")
-                    .join("objects")
-                    .join(&hash[0..2])
-                    .join(hash);
-                if dest.exists() {
-                    continue; // 已存在则跳过，支持断点续传
-                }
-                let url = format!(
-                    "https://resources.download.minecraft.net/{}/{}",
-                    &hash[0..2],
-                    hash
-                );
-                asset_tasks.push((url, dest, size));
-            }
-        }
-        info!(
-            "资源文件 {} 个待下载（索引: {}）",
-            asset_tasks.len(),
-            index_path.display()
-        );
-        download_files_concurrent(client, asset_tasks, MAX_CONCURRENT_DOWNLOADS, app, (50.0, 85.0))
-            .await?;
-    } else {
-        info!("资源索引不存在，跳过资源文件下载: {}", index_path.display());
-    }
 
     info!("游戏文件下载完成");
     Ok(())
@@ -413,16 +395,15 @@ pub async fn download_game(app: tauri::AppHandle) -> Result<(), String> {
     let version_id = manifest["id"].as_str().unwrap_or("unknown");
     info!("版本清单加载成功，版本: {}", version_id);
 
-    // 2. 按清单下载游戏文件到 game/.minecraft（进度 5% → 85%，含资源文件）
-    let game_dir = crate::config::app_dir().join("game");
-    let minecraft_dir = game_dir.join(".minecraft");
+    // 2. 按清单下载游戏文件到 game/.minecraft
     let _ = app.emit("download-progress", serde_json::json!({ "percent": 5.0 }));
+    let minecraft_dir = Path::new("game").join(".minecraft");
     download_game_files(&client, &manifest, &minecraft_dir, Some(&app)).await?;
-    let _ = app.emit("download-progress", serde_json::json!({ "percent": 85.0 }));
+    let _ = app.emit("download-progress", serde_json::json!({ "percent": 90.0 }));
 
-    // 3. 下载并解压 JRE 到 game/java（进度 85% → 97%）
+    // 3. 下载并解压 JRE 到 game/java
     let _ = app.emit("extract-start", ());
-    download_jre(&client, &game_dir, Some(&app), (85.0, 97.0)).await?;
+    download_jre(&client, Path::new("game"), Some(&app)).await?;
     let _ = app.emit("download-progress", serde_json::json!({ "percent": 100.0 }));
 
     // 4. 标记安装完成
