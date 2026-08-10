@@ -17,6 +17,8 @@
 
   const quickPrompts = ['新手应该先做什么？', '怎么找到钻石？', '下界要注意什么？']
 
+  const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+
   let status = 'downloading'
   let statusText = '游戏下载中...'
   let downloadPercent = 0
@@ -70,6 +72,10 @@
 
   // 下载游戏，启动检查与手动重试共用
   async function downloadGame() {
+    if (!isTauri) {
+      notify('浏览器预览模式，无法执行下载', 'info')
+      return
+    }
     status = 'downloading'
     statusText = '游戏下载中...'
     downloadPercent = 0
@@ -104,6 +110,11 @@
 
   // 应用启动时检查游戏是否已安装，未安装则自动下载
   async function ensureGameInstalled() {
+    if (!isTauri) {
+      status = 'ready'
+      statusText = '浏览器预览模式（仅用于界面调试）'
+      return
+    }
     let installed = ''
     try {
       installed = await invoke('get_config', { key: 'gameIsInstalled' })
@@ -121,6 +132,10 @@
   }
 
   async function sendMessage(message = draftMessage) {
+    if (!isTauri) {
+      notify('浏览器预览模式，无法与 AI 对话', 'info')
+      return
+    }
     const content = message.trim()
     if (!content || isReplying) return
 
@@ -182,6 +197,10 @@
   }
 
   async function startGame() {
+    if (!isTauri) {
+      notify('浏览器预览模式，无法启动游戏', 'info')
+      return
+    }
     if (isPlaying) {
       try {
         await invoke('close_game')
@@ -221,11 +240,14 @@
   }
 
   onMount(() => {
-    // 游戏进程被手动关闭时，恢复启动器为可开始状态
-    const unlistenExited = listen('game-exited', () => {
-      status = 'ready'
-      statusText = '准备开始冒险'
-    })
+    let unlistenExited
+    if (isTauri) {
+      // 游戏进程被手动关闭时，恢复启动器为可开始状态
+      unlistenExited = listen('game-exited', () => {
+        status = 'ready'
+        statusText = '准备开始冒险'
+      })
+    }
     ensureGameInstalled()
 
     // 调试模式：启动 1s 后依次弹出每种样式的通知，便于预览弹窗效果（仅开发环境生效）
@@ -238,7 +260,7 @@
     }
 
     return () => {
-      unlistenExited.then((fn) => fn?.())
+      unlistenExited?.then((fn) => fn?.())
     }
   })
 </script>
