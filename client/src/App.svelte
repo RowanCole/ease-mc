@@ -36,6 +36,23 @@
   let chatListEl
   // 记录当前流式输出的助手消息 id，用于逐字追加
   let streamingAssistantId = null
+  // 弹窗消息通知（下载/启动/AI 等异常时提醒用户）
+  let toasts = []
+  let toastId = 0
+
+  function errorText(error) {
+    return typeof error === 'string' ? error : error?.message ?? String(error)
+  }
+
+  function notify(message, type = 'error') {
+    const id = ++toastId
+    toasts = [...toasts, { id, message, type }]
+    setTimeout(() => dismissToast(id), 5000)
+  }
+
+  function dismissToast(id) {
+    toasts = toasts.filter((t) => t.id !== id)
+  }
 
   $: isPlaying = status === 'playing'
   $: isDownloading = status === 'downloading'
@@ -74,6 +91,7 @@
       downloadPercent = 100
     } catch (error) {
       console.error('下载失败:', error)
+      notify(`游戏下载失败：${errorText(error)}`, 'error')
       needDownload = true
       status = 'ready'
       statusText = '游戏下载失败，请检查网络后重试'
@@ -148,6 +166,7 @@
       finish()
     } catch (error) {
       console.error('AI 请求失败:', error)
+      notify(`AI 请求失败：${errorText(error)}`, 'error')
       if (streamingAssistantId == null) {
         chatMessages = [
           ...chatMessages,
@@ -171,6 +190,7 @@
       } catch (error) {
         console.error('Close failed:', error)
         statusText = '暂时无法结束游戏'
+        notify(`无法结束游戏：${errorText(error)}`, 'error')
       }
       return
     }
@@ -189,6 +209,7 @@
     } catch (error) {
       console.error('Launch failed:', error)
       statusText = '启动失败，请稍后重试'
+      notify(`游戏启动失败：${errorText(error)}`, 'error')
     }
   }
 
@@ -206,6 +227,15 @@
       statusText = '准备开始冒险'
     })
     ensureGameInstalled()
+
+    // 调试模式：启动 1s 后依次弹出每种样式的通知，便于预览弹窗效果（仅开发环境生效）
+    if (import.meta.env.DEV) {
+      setTimeout(() => {
+        notify('游戏下载失败：12 个文件下载失败，第一个错误: 下载 xxx 失败: HTTP 404', 'error')
+        setTimeout(() => notify('游戏下载完成，可以开始冒险了', 'success'), 500)
+        setTimeout(() => notify('正在安装运行环境，请稍候...', 'info'), 1000)
+      }, 1000)
+    }
 
     return () => {
       unlistenExited.then((fn) => fn?.())
@@ -378,4 +408,15 @@
       </form>
     </aside>
   {/if}
+
+  <div class="toast-stack" aria-live="polite">
+    {#each toasts as toast (toast.id)}
+      <div class="toast toast--{toast.type}" role="alert">
+        <p class="toast-message">{toast.message}</p>
+        <button type="button" title="关闭" aria-label="关闭通知" on:click={() => dismissToast(toast.id)}>
+          <X size={14} />
+        </button>
+      </div>
+    {/each}
+  </div>
 </div>

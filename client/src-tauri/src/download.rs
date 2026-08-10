@@ -11,11 +11,8 @@ use tracing::{debug, info};
 use crate::config::set_config;
 use crate::jre::download_jre;
 
-/// 并发下载上限。Mojang CDN 对单连接限速，8 并发可让多个库文件并行拉取。
 const MAX_CONCURRENT_DOWNLOADS: usize = 8;
 
-/// 将 Mojang 官方 URL 替换为国内镜像（BMCLAPI），显著提升国内下载速度。
-/// 规则：域名替换为 bmclapi2.bangbang93.com，libraries 路径前缀为 /maven。
 fn mirror_url(url: &str) -> String {
     if url.starts_with("https://libraries.minecraft.net/") {
         url.replacen(
@@ -101,9 +98,7 @@ impl ProgressCtx {
     }
 }
 
-/// 下载单个文件到目标路径，自动创建缺失的父目录。
-/// Mojang 官方地址会自动替换为镜像源以加速下载；
-/// 若镜像源缺失（404），则自动回退官方地址，保证文件不遗漏。
+
 pub async fn download_file(
     client: &Client,
     url: &str,
@@ -129,7 +124,7 @@ pub async fn download_file(
     download_from(client, url, dest, progress).await
 }
 
-/// 从指定 URL 下载单个文件到目标路径（不做镜像替换）。
+
 async fn download_from(
     client: &Client,
     url: &str,
@@ -168,12 +163,7 @@ async fn download_from(
     Ok(())
 }
 
-/// 并发下载多个文件，限制最大并发数，并按已下载字节数上报下载进度。
-///
-/// 进度范围由 `progress_range` 指定（如 (5.0, 60.0)），`tasks` 携带每个文件的
-/// 预期大小（来自版本清单），据此在 5%→60% 区间平滑推进。
-/// 所有任务都完成后统一返回；只要有一个失败即返回错误（已完成的文件保留）。
-/// `reqwest::Client` 内部共享连接池，`Clone` 后可在多任务中安全使用。
+
 async fn download_files_concurrent(
     client: &Client,
     tasks: Vec<(String, PathBuf, u64)>,
