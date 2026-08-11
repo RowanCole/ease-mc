@@ -397,7 +397,7 @@ pub async fn download_game(app: tauri::AppHandle) -> Result<(), String> {
     let _ = app.emit("download-progress", serde_json::json!({ "percent": 100.0 }));
 
     // 4. 标记安装完成
-    set_config("gameIsInstalled", "true")?;
+    set_config(app, "gameIsInstalled", "true")?;
     info!("=== 游戏下载流程完成 ===");
     Ok(())
 }

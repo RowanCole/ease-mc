@@ -47,7 +47,7 @@ pub async fn download_jre(
     app: Option<&tauri::AppHandle>,
 ) -> Result<(), String> {
     let key = if cfg!(windows) { "winJrePath" } else { "macJrePath" };
-    let url = crate::config::get_config(key)?;
+    let url = crate::config::get_config_inner(app, key)?;
     info!("开始下载 JRE（配置项: {}）", key);
 
     // 下载到临时文件（Windows 为 zip，macOS 为 tar.gz）
