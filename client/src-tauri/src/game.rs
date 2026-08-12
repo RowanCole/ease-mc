@@ -48,7 +48,7 @@ pub fn launch_game(app: AppHandle) -> Result<(), String> {
         return Err(format!(".minecraft directory not found at {:?}", minecraft_path));
     }
 
-    // Build classpath from libraries/
+ 
     let mut classpath: Vec<String> = Vec::new();
     let lib_dir = minecraft_path.join("libraries");
     if lib_dir.exists() {
@@ -56,12 +56,11 @@ pub fn launch_game(app: AppHandle) -> Result<(), String> {
     }
     classpath.push("versions/1.21.1/1.21.1.jar".to_string());
     debug!("classpath 共 {} 个 jar", classpath.len());
-    // Windows 用分号分隔 classpath，macOS/Linux 用冒号
+  
     let cp = classpath.join(if cfg!(windows) { ";" } else { ":" });
 
     let mut game_cmd = Command::new(java.to_str().unwrap());
-    // macOS 上 GLFW 要求 JVM 主线程必须是进程的第一个线程，否则启动即崩溃。
-    // 该参数仅 macOS JVM 支持，Windows 传入会报 "Unrecognized option"，故用 cfg 门控。
+
     #[cfg(target_os = "macos")]
     game_cmd.arg("-XstartOnFirstThread");
     game_cmd.args([
@@ -95,7 +94,7 @@ pub fn launch_game(app: AppHandle) -> Result<(), String> {
         "release",
     ]);
     game_cmd.current_dir(&minecraft_path);
-    // Hide the console window when launching the game on Windows
+
     #[cfg(windows)]
     game_cmd.creation_flags(CREATE_NO_WINDOW);
     let game = game_cmd
@@ -107,7 +106,6 @@ pub fn launch_game(app: AppHandle) -> Result<(), String> {
 
     *GAME.lock().map_err(|e| e.to_string())? = Some(game);
 
-    // Monitor the game process; notify the frontend when it exits on its own
     std::thread::spawn(move || loop {
         std::thread::sleep(Duration::from_secs(1));
         let exited: bool = {
