@@ -6,7 +6,6 @@ use tracing::{debug, info};
 
 use crate::download::download_file;
 
-/// 解压压缩包到目标目录，支持 .zip 和 .tar.gz。
 fn extract_archive(archive_path: &Path, dest_dir: &Path) -> Result<(), String> {
     let ext = archive_path
         .extension()
@@ -35,12 +34,7 @@ fn extract_archive(archive_path: &Path, dest_dir: &Path) -> Result<(), String> {
     Ok(())
 }
 
-/// 根据当前平台从 config.json 读取 JRE 下载地址（macJrePath / winJrePath），
-/// 下载、解压并重命名为 java 放到 game 目录下。
-///
-/// 目标结构：
-/// - Windows: game/java/bin/java.exe
-/// - macOS:   game/java/bin/java（自动去掉解压后的 jdk-*/Contents/Home 层级）
+
 pub async fn download_jre(
     client: &Client,
     game_dir: &Path,
@@ -105,8 +99,7 @@ pub async fn download_jre(
 mod tests {
     use super::*;
 
-    /// 下载 JRE 到 game/java 目录，并验证 java 可执行文件存在。
-    /// 运行：cargo test -- --nocapture download_jre_to_game_dir
+
     #[tokio::test]
     async fn download_jre_to_game_dir() {
         let client = Client::new();

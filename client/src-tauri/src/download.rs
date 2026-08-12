@@ -43,10 +43,6 @@ fn mirror_url(url: &str) -> String {
     }
 }
 
-/// 字节级下载进度上下文：累计已下载字节数，按阈值（推进 >= 1%）节流上报。
-///
-/// `total_bytes` 优先使用版本清单预知的总大小（跨文件精确）；传 0 时
-/// 退化为用单个响应的 Content-Length 计算（JRE 单文件下载场景）。
 #[derive(Clone)]
 pub(crate) struct ProgressCtx {
     app: tauri::AppHandle,
@@ -74,7 +70,6 @@ impl ProgressCtx {
         }
     }
 
-    /// 累计 n 字节并节流上报进度（每次推进 >= 1% 才发一次事件）。
     fn add_bytes(&self, n: u64, response_len: u64) {
         let total = if self.total_bytes > 0 {
             self.total_bytes
@@ -249,13 +244,7 @@ fn os_rules_allow(lib: &serde_json::Value, os_name: &str) -> bool {
     allow
 }
 
-/// 根据游戏版本清单（game.json）下载所有需要的文件到对应目录。
-///
-/// 目录结构（相对 minecraft_dir）：
-/// - libraries/{path}          第三方库（按当前系统过滤 rules）
-/// - versions/{id}/{id}.jar    客户端主 jar
-/// - assets/indexes/{id}.json  资源索引
-/// - assets/log_configs/{id}   日志配置文件
+
 pub async fn download_game_files(
     client: &Client,
     manifest: &serde_json::Value,
@@ -370,10 +359,7 @@ pub async fn download_game_files(
     Ok(())
 }
 
-/// 前端触发下载时调用（不再依赖本地静态服务器）：
-/// 1. 解析项目内置的 game.json 版本清单（编译期嵌入，随应用发布）
-/// 2. 按清单下载游戏文件到 game/.minecraft
-/// 3. 按当前平台从 config.json 下载并解压 JRE 到 game/java
+
 #[tauri::command]
 pub async fn download_game(app: tauri::AppHandle) -> Result<(), String> {
     info!("=== 开始游戏下载流程 ===");
@@ -406,8 +392,7 @@ pub async fn download_game(app: tauri::AppHandle) -> Result<(), String> {
 mod tests {
     use super::*;
 
-    /// 将 game.json 中的游戏文件下载到当前目录下的 game/.minecraft 目录，仅验证下载功能。
-    /// 运行：cargo test -- --nocapture download_game_files_to_game_dir
+
     #[tokio::test]
     async fn download_game_files_to_game_dir() {
         let client = Client::new();

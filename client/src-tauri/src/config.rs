@@ -2,9 +2,7 @@ use std::path::PathBuf;
 use tauri::Manager;
 use tracing::{debug, info};
 
-/// 解析 config.json 的实际路径：有 AppHandle 时使用用户配置目录
-/// （app_config_dir，可写且按用户隔离），无 AppHandle 时回退当前目录
-/// （供测试场景使用）。
+
 fn config_path(app: Option<&tauri::AppHandle>) -> Result<PathBuf, String> {
     match app {
         Some(handle) => {
@@ -18,9 +16,7 @@ fn config_path(app: Option<&tauri::AppHandle>) -> Result<PathBuf, String> {
     }
 }
 
-/// 确保用户配置目录下存在 config.json：若不存在，则从随应用分发的
-/// 资源目录（resource_dir，dev 模式下即 src-tauri 目录）复制初始配置，
-/// 保证 macJrePath / winJrePath 等初始值可读。
+
 fn ensure_config_file(app: &tauri::AppHandle) -> Result<(), String> {
     let cfg_path = config_path(Some(app))?;
     if cfg_path.exists() {
@@ -48,7 +44,7 @@ pub fn get_config(app: tauri::AppHandle, key: &str) -> Result<String, String> {
     get_config_inner(Some(&app), key)
 }
 
-/// 读取配置值（app 为 None 时回退当前目录，供测试/无窗口上下文场景使用）
+
 pub fn get_config_inner(app: Option<&tauri::AppHandle>, key: &str) -> Result<String, String> {
     if let Some(handle) = app {
         ensure_config_file(handle)?;
