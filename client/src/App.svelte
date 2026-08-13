@@ -2,22 +2,15 @@
   import { onMount } from 'svelte'
   import { invoke } from '@tauri-apps/api/core'
   import { listen } from '@tauri-apps/api/event'
-  import { marked } from 'marked'
-  import { Bot, Box, Gamepad2, Play, SendHorizontal, Square, X } from 'lucide-svelte'
   import './App.css'
 
-  // 保留 AI 回复中的换行（流式逐字追加依赖换行渲染）
-  marked.setOptions({ breaks: true })
-
-  const gameInfo = {
-    name: 'MC STARTER',
-    title: 'Minecraft',
-    subtitle: '进入属于你的方块世界',
-  }
-
-  const quickPrompts = ['新手应该先做什么？', '怎么找到钻石？', '下界要注意什么？']
-
-  const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+  import { gameInfo, isTauri } from './constants.js'
+  import Scene from './components/Scene.svelte'
+  import TopBar from './components/TopBar.svelte'
+  import HeroSection from './components/HeroSection.svelte'
+  import LaunchCard from './components/LaunchCard.svelte'
+  import ChatPanel from './components/ChatPanel.svelte'
+  import ToastStack from './components/ToastStack.svelte'
 
   let status = 'downloading'
   let statusText = '游戏下载中...'
@@ -25,7 +18,6 @@
   let isExtracting = false
   let needDownload = false
   let showChat = false
-  let draftMessage = ''
   let isReplying = false
   let streamStarted = false
   let chatMessages = [
@@ -35,20 +27,27 @@
       text: '你好！我是游戏助手。想聊聊生存、合成、探索，还是和朋友一起玩？',
     },
   ]
-  let chatListEl
   // 记录当前流式输出的助手消息 id，用于逐字追加
   let streamingAssistantId = null
   // 弹窗消息通知（下载/启动/AI 等异常时提醒用户）
   let toasts = []
   let toastId = 0
+  // 同屏最多展示的弹窗数量，超出时顶掉最早的
+  const MAX_TOASTS = 3
 
   function errorText(error) {
     return typeof error === 'string' ? error : error?.message ?? String(error)
   }
 
   function notify(message, type = 'error') {
+    // 相同消息已在展示中则忽略，避免重复点击导致弹窗堆积
+    if (toasts.some((t) => t.message === message && t.type === type)) return
+
     const id = ++toastId
     toasts = [...toasts, { id, message, type }]
+    if (toasts.length > MAX_TOASTS) {
+      toasts = toasts.slice(toasts.length - MAX_TOASTS)
+    }
     setTimeout(() => dismissToast(id), 5000)
   }
 
@@ -59,21 +58,19 @@
   $: isPlaying = status === 'playing'
   $: isDownloading = status === 'downloading'
 
-  function scrollChatToEnd() {
-    requestAnimationFrame(() => {
-      chatListEl?.scrollTo({ top: chatListEl.scrollHeight, behavior: 'smooth' })
-    })
-  }
-
   function openChat() {
     showChat = true
-    scrollChatToEnd()
   }
 
   // 下载游戏，启动检查与手动重试共用
   async function downloadGame() {
     if (!isTauri) {
       notify('浏览器预览模式，无法执行下载', 'info')
+      return
+    }
+    // 防重入：下载/安装过程中忽略重复点击
+    if (isDownloading || isExtracting) {
+      notify('游戏正在下载/安装中，请稍候', 'info')
       return
     }
     status = 'downloading'
@@ -87,6 +84,7 @@
     const unlistenExtract = await listen('extract-start', () => {
       isExtracting = true
       statusText = '正在安装运行环境...'
+      notify('正在安装运行环境，请稍候...', 'info')
     })
 
     try {
@@ -95,6 +93,7 @@
       status = 'ready'
       statusText = '游戏下载完成，可以开始冒险了'
       downloadPercent = 100
+      notify('游戏下载完成，可以开始冒险了', 'success')
     } catch (error) {
       console.error('下载失败:', error)
       notify(`游戏下载失败：${errorText(error)}`, 'error')
@@ -131,7 +130,8 @@
     }
   }
 
-  async function sendMessage(message = draftMessage) {
+  // 发送 AI 消息：输入框与消息列表由 ChatPanel 管理，这里负责流式接收与状态更新
+  async function sendMessage(message) {
     if (!isTauri) {
       notify('浏览器预览模式，无法与 AI 对话', 'info')
       return
@@ -140,10 +140,8 @@
     if (!content || isReplying) return
 
     chatMessages = [...chatMessages, { id: Date.now(), role: 'user', text: content }]
-    draftMessage = ''
     isReplying = true
     streamStarted = false
-    scrollChatToEnd()
 
     let finished = false
     let unlistenChunk
@@ -156,7 +154,6 @@
       unlistenChunk?.()
       unlistenDone?.()
       isReplying = false
-      scrollChatToEnd()
     }
 
     // 流式监听：首块到达时创建助手消息，后续逐字追加
@@ -172,7 +169,6 @@
           m.id === streamingAssistantId ? { ...m, text: m.text + chunk } : m,
         )
       }
-      scrollChatToEnd()
     })
     unlistenDone = await listen('chat-done', finish)
 
@@ -232,13 +228,6 @@
     }
   }
 
-  function handleComposerKeyDown(event) {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault()
-      sendMessage()
-    }
-  }
-
   onMount(() => {
     let unlistenExited
     if (isTauri) {
@@ -250,15 +239,6 @@
     }
     ensureGameInstalled()
 
-    // 调试模式：启动 1s 后依次弹出每种样式的通知，便于预览弹窗效果（仅开发环境生效）
-    if (import.meta.env.DEV) {
-      setTimeout(() => {
-        notify('游戏下载失败：12 个文件下载失败，第一个错误: 下载 xxx 失败: HTTP 404', 'error')
-        setTimeout(() => notify('游戏下载完成，可以开始冒险了', 'success'), 500)
-        setTimeout(() => notify('正在安装运行环境，请稍候...', 'info'), 1000)
-      }, 1000)
-    }
-
     return () => {
       unlistenExited?.then((fn) => fn?.())
     }
@@ -266,179 +246,34 @@
 </script>
 
 <div class="app-shell">
-  <div class="scene" aria-hidden="true"></div>
-  <div class="scene-overlay" aria-hidden="true"></div>
-  <div class="scene-grid" aria-hidden="true"></div>
+  <Scene />
 
-  <header class="topbar">
-    <div class="brand-lockup">
-      <div class="brand-mark" aria-hidden="true">
-        <Box size={19} strokeWidth={2.3} />
-      </div>
-      <p>{gameInfo.name}</p>
-    </div>
-    <button class="assistant-trigger" type="button" title="打开游戏助手" on:click={openChat}>
-      <span class="assistant-trigger-icon"><Bot size={19} strokeWidth={2.2} /></span>
-      <span>游戏助手</span>
-    </button>
-  </header>
+  <TopBar gameName={gameInfo.name} on:openAssistant={openChat} />
 
   <main class="launcher-main">
-    <section class="hero-copy" aria-labelledby="launcher-title">
-      <div class="eyebrow"><span></span> WELCOME BACK</div>
-      <h1 id="launcher-title">{gameInfo.title}</h1>
-      <p>{gameInfo.subtitle}</p>
-    </section>
-
-    <section class="launch-deck" aria-label="游戏启动">
-      <div class="deck-intro">
-        <div class="deck-symbol" aria-hidden="true">
-          <Gamepad2 size={22} strokeWidth={2} />
-        </div>
-        <div>
-          <p class="deck-state">{isDownloading ? '游戏下载中' : isPlaying ? '游戏正在运行' : needDownload ? '游戏未安装' : '已准备就绪'}</p>
-          <p class="deck-hint">{isDownloading ? `下载进度 ${downloadPercent.toFixed(1)}%` : isPlaying ? '愿你的冒险一切顺利' : needDownload ? '游戏尚未安装' : '随时可以开始新的冒险'}</p>
-        </div>
-      </div>
-      <h2>{isDownloading ? '正在准备游戏...' : isPlaying ? '愿你的冒险一切顺利' : needDownload ? '游戏尚未安装' : '准备好出发了吗？'}</h2>
-      <p class="deck-copy">
-        {isDownloading ? '游戏下载完成后，即可开始冒险。' : isPlaying ? '游戏正在运行。' : needDownload ? '点击下方按钮，重新下载并安装游戏。' : '点击下方按钮，即刻进入游戏。'}
-      </p>
-
-      <div class="launch-divider"></div>
-
-      <button
-        class="launch-button"
-        class:running={isPlaying || isExtracting}
-        class:downloading={isDownloading && !isExtracting}
-        type="button"
-        on:click={startGame}
-        disabled={isDownloading}
-        aria-busy={isDownloading}
-      >
-        {#if isDownloading}
-          <span
-            class="download-wave-svg"
-            aria-hidden="true"
-            style="animation: none; transform: translateY({100 - downloadPercent}%);"
-          >
-            <svg class="download-wave-layer download-wave-layer--back" viewBox="0 0 2000 100" preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="download-wave-back" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="#a5e8f8" stop-opacity="0.24" />
-                  <stop offset="100%" stop-color="#58c4e8" stop-opacity="0.26" />
-                </linearGradient>
-              </defs>
-              <path d="M0 66 C83 59 167 59 250 66 C333 73 417 73 500 66 C583 59 667 59 750 66 C833 73 917 73 1000 66 C1083 59 1167 59 1250 66 C1333 73 1417 73 1500 66 C1583 59 1667 59 1750 66 C1833 73 1917 73 2000 66 V100 H0 Z" fill="url(#download-wave-back)" />
-            </svg>
-            <svg class="download-wave-layer download-wave-layer--mid" viewBox="0 0 2000 100" preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="download-wave-mid" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="#91e3f6" stop-opacity="0.36" />
-                  <stop offset="100%" stop-color="#58c4e8" stop-opacity="0.4" />
-                </linearGradient>
-              </defs>
-              <path d="M0 64 C83 55 167 55 250 64 C333 73 417 73 500 64 C583 55 667 55 750 64 C833 73 917 73 1000 64 C1083 55 1167 55 1250 64 C1333 73 1417 73 1500 64 C1583 55 1667 55 1750 64 C1833 73 1917 73 2000 64 V100 H0 Z" fill="url(#download-wave-mid)" />
-            </svg>
-            <svg class="download-wave-layer download-wave-layer--front" viewBox="0 0 2000 100" preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="download-wave-front" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="#c7f5ff" stop-opacity="0.7" />
-                  <stop offset="58%" stop-color="#74d3ee" stop-opacity="0.74" />
-                  <stop offset="100%" stop-color="#58c4e8" stop-opacity="0.78" />
-                </linearGradient>
-              </defs>
-              <path d="M0 62 C83 52 167 52 250 62 C333 72 417 72 500 62 C583 52 667 52 750 62 C833 72 917 72 1000 62 C1083 52 1167 52 1250 62 C1333 72 1417 72 1500 62 C1583 52 1667 52 1750 62 C1833 72 1917 72 2000 62 V100 H0 Z" fill="url(#download-wave-front)" />
-              <path d="M0 62 C83 52 167 52 250 62 C333 72 417 72 500 62 C583 52 667 52 750 62 C833 72 917 72 1000 62 C1083 52 1167 52 1250 62 C1333 72 1417 72 1500 62 C1583 52 1667 52 1750 62 C1833 72 1917 72 2000 62" class="download-wave-crest" />
-            </svg>
-          </span>
-        {/if}
-        <span class="launch-button-content">
-          {#if isPlaying}
-            <Square size={18} fill="currentColor" />
-          {:else if !isDownloading}
-            <Play size={20} fill="currentColor" />
-          {/if}
-          <span>{isExtracting ? '正在解压...' : isDownloading ? '游戏下载中...' : needDownload ? '下载游戏' : isPlaying ? '结束游戏' : '启动游戏'}</span>
-        </span>
-      </button>
-      <p class="launch-status">
-        <span class:running={isPlaying}></span>{statusText}
-      </p>
-    </section>
+    <HeroSection title={gameInfo.title} subtitle={gameInfo.subtitle} />
+    <LaunchCard
+      {isDownloading}
+      {isPlaying}
+      {needDownload}
+      {downloadPercent}
+      {isExtracting}
+      {statusText}
+      on:action={startGame}
+    />
   </main>
 
   <footer class="footer-bar">© {new Date().getFullYear()} {gameInfo.name}</footer>
 
   {#if showChat}
-    <button class="chat-backdrop" type="button" aria-label="关闭游戏助手" on:click={() => (showChat = false)}></button>
+    <ChatPanel
+      {chatMessages}
+      {isReplying}
+      {streamStarted}
+      on:close={() => (showChat = false)}
+      on:send={(event) => sendMessage(event.detail)}
+    />
   {/if}
 
-  {#if showChat}
-    <aside class="chat-panel" aria-label="游戏助手">
-      <header class="chat-header">
-        <div class="chat-title">
-          <span class="chat-title-icon"><Bot size={19} strokeWidth={2.2} /></span>
-          <div>
-            <p>游戏助手</p>
-            <span>随时问我游戏里的事</span>
-          </div>
-        </div>
-        <button class="chat-icon-button" type="button" title="关闭游戏助手" aria-label="关闭游戏助手" on:click={() => (showChat = false)}>
-          <X size={18} />
-        </button>
-      </header>
-
-      <div bind:this={chatListEl} class="chat-messages" aria-live="polite">
-        {#each chatMessages as message (message.id)}
-          <div class="chat-message {message.role}">
-            {#if message.role === 'assistant'}
-              <span class="assistant-avatar"><Bot size={15} strokeWidth={2.2} /></span>
-              <div class="chat-bubble markdown">{@html marked.parse(message.text)}</div>
-            {:else}
-              <p>{message.text}</p>
-            {/if}
-          </div>
-        {/each}
-        {#if isReplying && !streamStarted}
-          <div class="chat-message assistant thinking" aria-label="游戏助手正在输入">
-            <span class="assistant-avatar"><Bot size={15} strokeWidth={2.2} /></span>
-            <p><i></i><i></i><i></i></p>
-          </div>
-        {/if}
-      </div>
-
-      {#if chatMessages.length === 1}
-        <div class="quick-prompts" aria-label="推荐问题">
-          {#each quickPrompts as prompt (prompt)}
-            <button type="button" on:click={() => sendMessage(prompt)}>{prompt}</button>
-          {/each}
-        </div>
-      {/if}
-
-      <form class="chat-composer" on:submit|preventDefault={() => sendMessage()}>
-        <textarea
-          rows="1"
-          maxlength="300"
-          placeholder="问问游戏里的事..."
-          bind:value={draftMessage}
-          on:keydown={handleComposerKeyDown}
-        ></textarea>
-        <button type="submit" title="发送消息" aria-label="发送消息" disabled={!draftMessage.trim() || isReplying}>
-          <SendHorizontal size={18} />
-        </button>
-      </form>
-    </aside>
-  {/if}
-
-  <div class="toast-stack" aria-live="polite">
-    {#each toasts as toast (toast.id)}
-      <div class="toast toast--{toast.type}" role="alert">
-        <p class="toast-message">{toast.message}</p>
-        <button type="button" title="关闭" aria-label="关闭通知" on:click={() => dismissToast(toast.id)}>
-          <X size={14} />
-        </button>
-      </div>
-    {/each}
-  </div>
+  <ToastStack {toasts} on:dismiss={(event) => dismissToast(event.detail)} />
 </div>
