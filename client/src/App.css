@@ -508,7 +508,6 @@ button {
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(16px) saturate(110%);
   pointer-events: auto;
-  animation: toast-in 200ms ease;
 }
 
 .toast--error {
@@ -549,11 +548,6 @@ button {
 .toast button:hover {
   color: var(--ink);
   background: rgba(234, 242, 227, 0.1);
-}
-
-@keyframes toast-in {
-  from { opacity: 0; transform: translateY(-6px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 .chat-backdrop {
