@@ -9,7 +9,7 @@ use dotenv::dotenv;
 
 fn main() {
 
-    dotenv().expect("环境加载失败");
+    dotenv().ok();
 
     tracing_subscriber::registry()
         .with(

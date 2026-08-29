@@ -3,22 +3,20 @@ use tauri::Manager;
 use tracing::{debug, info};
 
 
-fn config_path(app: Option<&tauri::AppHandle>) -> Result<PathBuf, String> {
-    match app {
-        Some(handle) => {
-            let dir = handle
-                .path()
-                .app_config_dir()
-                .map_err(|e| format!("获取配置目录失败: {}", e))?;
-            Ok(dir.join("config.json"))
-        }
-        None => Ok(std::path::PathBuf::from("config.json")),
-    }
+fn config_path() -> Result<PathBuf, String> {
+        let exe_dir = std::env::current_exe()
+            .map_err(|e| format!("获取可执行文件路径失败: {}", e))?
+            .parent()
+            .ok_or_else(|| "获取可执行文件目录失败".to_string())?
+            .to_path_buf();
+        println!("{:?}",exe_dir);
+        Ok(exe_dir.join("config.json"))
+    
 }
 
 
 fn ensure_config_file(app: &tauri::AppHandle) -> Result<(), String> {
-    let cfg_path = config_path(Some(app))?;
+    let cfg_path = config_path()?;
     if cfg_path.exists() {
         return Ok(());
     }
@@ -50,7 +48,7 @@ pub fn get_config_inner(app: Option<&tauri::AppHandle>, key: &str) -> Result<Str
         ensure_config_file(handle)?;
     }
     info!("get_config 调用: key={}", key);
-    let cfg_path = config_path(app)?;
+    let cfg_path = config_path()?;
     let content = std::fs::read_to_string(&cfg_path)
         .map_err(|e| format!("读取配置文件失败: {}", e))?;
     let json: serde_json::Value = serde_json::from_str(&content)
@@ -79,7 +77,7 @@ pub fn set_config_inner(
         ensure_config_file(handle)?;
     }
     debug!("写入配置 {} = {}", key, value);
-    let cfg_path = config_path(app)?;
+    let cfg_path = config_path()?;
     let mut json: serde_json::Value = if cfg_path.exists() {
         let content = std::fs::read_to_string(&cfg_path)
             .map_err(|e| format!("读取配置文件失败: {}", e))?;

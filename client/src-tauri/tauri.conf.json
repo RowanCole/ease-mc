@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "mc-starter",
-  "version": "0.1.0",
-  "identifier": "com.rowan.mc-starter",
+  "productName": "EaseMC",
+  "version": "0.1.1",
+  "identifier": "com.rowan.easemc",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "welcome",
+        "title": "EaseMC",
         "width": 900,
         "height": 700,
         "minWidth": 600,
@@ -33,6 +33,12 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "languages": ["SimpChinese", "English"]
+      }
+    }
   }
 }

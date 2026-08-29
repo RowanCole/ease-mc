@@ -13,6 +13,8 @@ use crate::jre::download_jre;
 
 const MAX_CONCURRENT_DOWNLOADS: usize = 8;
 
+
+
 fn mirror_url(url: &str) -> String {
     if url.starts_with("https://libraries.minecraft.net/") {
         url.replacen(
@@ -41,6 +43,16 @@ fn mirror_url(url: &str) -> String {
     } else {
         url.to_string()
     }
+}
+
+/// 游戏安装目录：与可执行文件同级的 game 目录
+pub fn game_path() -> Result<PathBuf, String> {
+    let exe_dir = std::env::current_exe()
+        .map_err(|e| format!("获取可执行文件路径失败: {}", e))?
+        .parent()
+        .ok_or_else(|| "获取可执行文件目录失败".to_string())?
+        .to_path_buf();
+    Ok(exe_dir.join("game"))
 }
 
 #[derive(Clone)]
@@ -373,13 +385,14 @@ pub async fn download_game(app: tauri::AppHandle) -> Result<(), String> {
 
     // 2. 按清单下载游戏文件到 game/.minecraft
     let _ = app.emit("download-progress", serde_json::json!({ "percent": 5.0 }));
-    let minecraft_dir = Path::new("game").join(".minecraft");
+    let game_dir = game_path()?;
+    let minecraft_dir = game_dir.join(".minecraft");
     download_game_files(&client, &manifest, &minecraft_dir, Some(&app)).await?;
     let _ = app.emit("download-progress", serde_json::json!({ "percent": 90.0 }));
 
     // 3. 下载并解压 JRE 到 game/java
     let _ = app.emit("extract-start", ());
-    download_jre(&client, Path::new("game"), Some(&app)).await?;
+    download_jre(&client, &game_dir, Some(&app)).await?;
     let _ = app.emit("download-progress", serde_json::json!({ "percent": 100.0 }));
 
     // 4. 标记安装完成

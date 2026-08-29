@@ -1,7 +1,7 @@
 // 全局常量与工具
 
 export const gameInfo = {
-  name: 'MC STARTER',
+  name: '让Minecraft更方便',
   title: 'Minecraft',
   subtitle: '进入属于你的方块世界',
 }

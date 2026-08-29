@@ -12,8 +12,8 @@
   import ChatPanel from './components/ChatPanel.svelte'
   import ToastStack from './components/ToastStack.svelte'
 
-  let status = 'downloading'
-  let statusText = '游戏下载中...'
+  let status = 'idle'
+  let statusText = '正在检查游戏状态...'
   let downloadPercent = 0
   let isExtracting = false
   let needDownload = false
