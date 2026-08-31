@@ -47,7 +47,8 @@ button {
 
 .scene,
 .scene-overlay,
-.scene-grid {
+.scene-grid,
+.advanced-scene {
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -74,7 +75,38 @@ button {
   mask-image: linear-gradient(to bottom, transparent, black 14%, black 88%, transparent);
 }
 
+/* 高级模式页面背景：亮色蓝白主题，浅蓝渐变 + 点阵网格，与普通模式照片背景区分（待开发，可替换为专属背景图） */
+.advanced-scene {
+  z-index: -3;
+  background:
+    radial-gradient(ellipse 80% 55% at 50% -8%, rgba(56, 152, 236, 0.16), transparent 70%),
+    radial-gradient(ellipse 60% 45% at 88% 100%, rgba(64, 172, 205, 0.12), transparent 70%),
+    linear-gradient(180deg, #eef5fc 0%, #e3eef8 52%, #dce9f5 100%);
+}
+
+.advanced-scene::after {
+  position: absolute;
+  inset: 0;
+  opacity: 0.55;
+  background-image: radial-gradient(rgba(58, 124, 182, 0.16) 1px, transparent 1.4px);
+  background-size: 22px 22px;
+  mask-image: linear-gradient(to bottom, transparent, black 20%, black 82%, transparent);
+  content: "";
+}
+
+/* 视图切换层：绝对定位铺满整个窗口，新旧页面在切换动画期间完全重叠、互不影响布局 */
+.view-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  /* 顶部让位给顶栏，内容在剩余区域居中 */
+  padding-top: 82px;
+}
+
 .topbar {
+  position: relative;
+  z-index: 5;
   display: flex;
   min-height: 82px;
   align-items: center;
@@ -83,6 +115,7 @@ button {
   background: rgba(9, 15, 10, 0.34);
   border-bottom: 1px solid rgba(234, 242, 227, 0.1);
   -webkit-app-region: drag;
+  transition: background-color 300ms ease, border-color 300ms ease;
 }
 
 .brand-lockup {
@@ -95,12 +128,27 @@ button {
   display: grid;
   width: 35px;
   height: 35px;
+  padding: 0;
   place-items: center;
   color: #14200f;
   background: var(--lime);
   border: 1px solid rgba(244, 255, 227, 0.62);
   border-radius: 6px;
   box-shadow: 0 7px 18px rgba(100, 153, 50, 0.25);
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  transition: background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.brand-mark:hover {
+  background: var(--lime-bright);
+  box-shadow: 0 9px 22px rgba(100, 153, 50, 0.32);
+  transform: translateY(-1px);
+}
+
+.brand-mark:focus-visible {
+  outline: 2px solid var(--lime-bright);
+  outline-offset: 3px;
 }
 
 .brand-lockup p {
@@ -109,6 +157,7 @@ button {
   font-size: 13px;
   font-weight: 850;
   letter-spacing: 0.08em;
+  transition: color 300ms ease;
 }
 
 .assistant-trigger {
@@ -136,6 +185,7 @@ button {
   color: #172212;
   background: var(--lime);
   border-radius: 4px;
+  transition: background-color 300ms ease, color 300ms ease;
 }
 
 .assistant-trigger:hover {
@@ -160,6 +210,279 @@ button {
   gap: clamp(48px, 9vw, 150px);
   margin: auto;
   padding: 44px 0;
+}
+
+/* 高级模式占位页（待开发，亮色蓝白主题） */
+.advanced-page {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  padding: 44px 24px;
+}
+
+.advanced-panel {
+  display: flex;
+  width: min(100%, 460px);
+  flex-direction: column;
+  align-items: center;
+  padding: 44px 36px 38px;
+  color: #16324a;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(58, 124, 182, 0.22);
+  border-radius: 8px;
+  box-shadow: 0 24px 56px rgba(38, 84, 124, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(18px) saturate(105%);
+  animation: advanced-panel-in 200ms ease;
+}
+
+@keyframes advanced-panel-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.advanced-symbol {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  color: #ffffff;
+  background: #2e7dd1;
+  border: 1px solid rgba(46, 125, 209, 0.4);
+  border-radius: 6px;
+  box-shadow: 0 8px 19px rgba(46, 125, 209, 0.25);
+}
+
+.advanced-eyebrow {
+  margin: 20px 0 0;
+  color: #2e7dd1;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.advanced-panel h2 {
+  margin: 10px 0 8px;
+  color: #143049;
+  font-size: 28px;
+  font-weight: 760;
+  line-height: 1.2;
+}
+
+.advanced-copy {
+  margin: 0;
+  color: #4d6b85;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.advanced-back {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  margin-top: 30px;
+  padding: 0 20px;
+  color: #ffffff;
+  background: #2e7dd1;
+  border: 1px solid rgba(46, 125, 209, 0.45);
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 720;
+  box-shadow: 0 8px 18px rgba(46, 125, 209, 0.22);
+  transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.advanced-back:hover {
+  background: #3b8ae0;
+  border-color: rgba(46, 125, 209, 0.6);
+  box-shadow: 0 10px 22px rgba(46, 125, 209, 0.3);
+  transform: translateY(-1px);
+}
+
+.advanced-back:focus-visible {
+  outline: 2px solid #2e7dd1;
+  outline-offset: 3px;
+}
+
+/* 高级模式下的顶栏 / 底栏：跟随亮色蓝白主题 */
+.app-shell.advanced .topbar {
+  background: rgba(255, 255, 255, 0.62);
+  border-bottom: 1px solid rgba(58, 124, 182, 0.2);
+}
+
+.app-shell.advanced .brand-lockup p {
+  color: #143049;
+}
+
+.app-shell.advanced .brand-mark {
+  color: #ffffff;
+  background: #2e7dd1;
+  border-color: rgba(46, 125, 209, 0.45);
+  box-shadow: 0 7px 18px rgba(46, 125, 209, 0.25);
+}
+
+.app-shell.advanced .brand-mark:hover {
+  background: #3b8ae0;
+  box-shadow: 0 9px 22px rgba(46, 125, 209, 0.32);
+}
+
+.app-shell.advanced .brand-mark:focus-visible {
+  outline-color: #2e7dd1;
+}
+
+.app-shell.advanced .assistant-trigger {
+  color: #143049;
+  background: rgba(58, 124, 182, 0.08);
+  border-color: rgba(58, 124, 182, 0.24);
+}
+
+.app-shell.advanced .assistant-trigger-icon {
+  color: #ffffff;
+  background: #2e7dd1;
+}
+
+.app-shell.advanced .assistant-trigger:hover {
+  background: rgba(46, 125, 209, 0.13);
+  border-color: rgba(46, 125, 209, 0.38);
+}
+
+.app-shell.advanced .assistant-trigger:focus-visible {
+  outline-color: #2e7dd1;
+}
+
+/* 高级模式下的游戏助手聊天面板：跟随亮色蓝白主题 */
+.app-shell.advanced .chat-backdrop {
+  background: rgba(28, 58, 88, 0.18);
+}
+
+.app-shell.advanced .chat-panel {
+  color: #16324a;
+  background: rgba(255, 255, 255, 0.97);
+  border-color: rgba(58, 124, 182, 0.24);
+  box-shadow: 0 28px 70px rgba(38, 84, 124, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.app-shell.advanced .chat-header {
+  border-bottom-color: rgba(58, 124, 182, 0.16);
+}
+
+.app-shell.advanced .chat-title-icon,
+.app-shell.advanced .assistant-avatar {
+  color: #ffffff;
+  background: #2e7dd1;
+}
+
+.app-shell.advanced .chat-title > div > p {
+  color: #143049;
+}
+
+.app-shell.advanced .chat-title > div > span {
+  color: #4d6b85;
+}
+
+.app-shell.advanced .chat-icon-button {
+  color: #4d6b85;
+}
+
+.app-shell.advanced .chat-icon-button:hover {
+  color: #143049;
+  background: rgba(58, 124, 182, 0.1);
+}
+
+.app-shell.advanced .chat-messages {
+  scrollbar-color: rgba(46, 125, 209, 0.4) transparent;
+}
+
+.app-shell.advanced .chat-message > p,
+.app-shell.advanced .chat-message .chat-bubble {
+  color: #2c4a63;
+  background: rgba(58, 124, 182, 0.08);
+  border-color: rgba(58, 124, 182, 0.14);
+}
+
+.app-shell.advanced .chat-message .chat-bubble strong {
+  color: #143049;
+}
+
+.app-shell.advanced .chat-message .chat-bubble h1,
+.app-shell.advanced .chat-message .chat-bubble h2,
+.app-shell.advanced .chat-message .chat-bubble h3 {
+  color: #143049;
+}
+
+.app-shell.advanced .chat-message .chat-bubble code {
+  background: rgba(58, 124, 182, 0.12);
+}
+
+.app-shell.advanced .chat-message .chat-bubble pre {
+  background: rgba(46, 125, 209, 0.08);
+}
+
+.app-shell.advanced .chat-message .chat-bubble pre code {
+  background: none;
+}
+
+.app-shell.advanced .chat-message .chat-bubble blockquote {
+  border-left-color: rgba(46, 125, 209, 0.5);
+  color: #4d6b85;
+}
+
+.app-shell.advanced .chat-message .chat-bubble a {
+  color: #2e7dd1;
+}
+
+.app-shell.advanced .chat-message.user p {
+  color: #ffffff;
+  background: #2e7dd1;
+  border-color: rgba(46, 125, 209, 0.5);
+}
+
+.app-shell.advanced .thinking i {
+  background: #2e7dd1;
+}
+
+.app-shell.advanced .quick-prompts button {
+  color: #3c5a74;
+  background: rgba(58, 124, 182, 0.06);
+  border-color: rgba(58, 124, 182, 0.2);
+}
+
+.app-shell.advanced .quick-prompts button:hover {
+  color: #143049;
+  background: rgba(46, 125, 209, 0.12);
+  border-color: rgba(46, 125, 209, 0.36);
+}
+
+.app-shell.advanced .chat-composer {
+  background: rgba(58, 124, 182, 0.05);
+  border-top-color: rgba(58, 124, 182, 0.16);
+}
+
+.app-shell.advanced .chat-composer textarea {
+  color: #143049;
+}
+
+.app-shell.advanced .chat-composer textarea::placeholder {
+  color: #4d6b85;
+}
+
+.app-shell.advanced .chat-composer button {
+  color: #ffffff;
+  background: #2e7dd1;
+  border-color: rgba(46, 125, 209, 0.5);
+}
+
+.app-shell.advanced .chat-composer button:hover:not(:disabled) {
+  background: #3b8ae0;
+}
+
+.app-shell.advanced .chat-icon-button:focus-visible,
+.app-shell.advanced .chat-composer textarea:focus-visible,
+.app-shell.advanced .chat-composer button:focus-visible,
+.app-shell.advanced .quick-prompts button:focus-visible {
+  outline-color: #2e7dd1;
 }
 
 .hero-copy {
@@ -467,19 +790,6 @@ button {
   box-shadow: 0 0 0 3px rgba(255, 194, 118, 0.13);
 }
 
-.footer-bar {
-  display: flex;
-  min-height: 47px;
-  align-items: center;
-  justify-content: center;
-  color: rgba(235, 243, 230, 0.55);
-  background: rgba(6, 10, 7, 0.34);
-  border-top: 1px solid rgba(234, 242, 227, 0.1);
-  font-size: 10px;
-  font-weight: 650;
-  letter-spacing: 0.07em;
-}
-
 .toast-stack {
   position: fixed;
   z-index: 30;
@@ -675,7 +985,7 @@ button {
 .chat-message {
   display: flex;
   max-width: 88%;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
 }
 
@@ -909,6 +1219,10 @@ button {
   .topbar {
     min-height: 66px;
     padding-inline: 16px;
+  }
+
+  .view-layer {
+    padding-top: 66px;
   }
 
   .assistant-trigger {

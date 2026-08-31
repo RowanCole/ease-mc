@@ -17,7 +17,7 @@ A zero-setup, one-click Minecraft launcher for beginners.
 
 ## About
 
-EaseMC is an open-source, offline Minecraft launcher built for players who just want to play. No manual Java installation, no version manifests to wrangle, no account required — open the launcher and it takes care of everything: downloading the game, installing a bundled Java runtime, and launching with a single click.
+EaseMC is an open-source Minecraft launcher focused on giving beginners the easiest possible way into the game. No manual Java installation, no version manifests to wrangle — click the download button and the launcher takes care of everything: fetching the game files, installing a bundled Java runtime, then launching with a single click.
 
 It also ships with a built-in AI game assistant (powered by DeepSeek) that answers beginner questions about survival, crafting, and exploration.
 
@@ -25,7 +25,7 @@ It also ships with a built-in AI game assistant (powered by DeepSeek) that answe
 
 ## Features
 
-- **Zero setup** — On first launch, the app automatically downloads all game files and a Java 21 runtime (Azul Zulu). Nothing to install manually.
+- **Zero setup** — Click the download button and the app fetches all game files plus a Java 21 runtime (Azul Zulu). Nothing to install manually.
 - **Fast, resilient downloads** — 8 concurrent connections with real-time progress; BMCLAPI mirror acceleration for China, with automatic fallback to official Mojang sources.
 - **One-click launch / stop** — Start or end the game from a single button; the launcher manages the game process for you.
 - **Built-in AI assistant** — Streaming chat powered by DeepSeek, pre-loaded with launcher-specific knowledge (installation, file locations, troubleshooting), with Markdown rendering and quick prompts.
@@ -115,7 +115,7 @@ Do not commit this file. If the key is missing, only the AI assistant is disable
 
 ## How It Works
 
-1. **First run** — the launcher checks installation status, downloads all game artifacts concurrently (via the BMCLAPI mirror, falling back to Mojang), then downloads and extracts the Java 21 runtime.
+1. **First run** — the launcher checks installation status; clicking the download button fetches all game artifacts concurrently (via the BMCLAPI mirror, falling back to Mojang), then downloads and extracts the Java 21 runtime.
 2. **Launch** — the Rust backend assembles the classpath from `game/.minecraft/libraries` plus the client jar, then spawns the `java` process with the correct native-library arguments for each platform.
 3. **Game files** live in a `game/` directory next to the executable — portable and self-contained.
 
@@ -133,8 +133,10 @@ client/
 │   ├── constants.js          # Constants (gameInfo / quickPrompts / isTauri)
 │   ├── assets/
 │   └── components/           # UI components
-│       ├── Scene.svelte      # Background scene
-│       ├── TopBar.svelte     # Top bar (brand + assistant entry)
+│       ├── LauncherView.svelte # Normal mode page (background + hero + launch card)
+│       ├── AdvancedMode.svelte # Advanced mode page (own background & layout; placeholder, click the top-left icon)
+│       ├── Scene.svelte      # Background scene (normal mode)
+│       ├── TopBar.svelte     # Top bar (brand + assistant entry + mode toggle)
 │       ├── HeroSection.svelte# Hero section
 │       ├── LaunchCard.svelte # Launch card (status text)
 │       ├── LaunchButton.svelte # Launch/download button (with wave animation)

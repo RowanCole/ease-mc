@@ -25,7 +25,7 @@
   </div>
   <h2>{isDownloading ? '正在准备游戏...' : isPlaying ? '愿你的冒险一切顺利' : needDownload ? '游戏尚未安装' : '准备好出发了吗？'}</h2>
   <p class="deck-copy">
-    {isDownloading ? '游戏下载完成后，即可开始冒险。' : isPlaying ? '游戏正在运行。' : needDownload ? '点击下方按钮，重新下载并安装游戏。' : '点击下方按钮，即刻进入游戏。'}
+    {isDownloading ? '游戏下载完成后，即可开始冒险。' : isPlaying ? '游戏正在运行。' : needDownload ? '点击下方按钮，下载并安装游戏。' : '点击下方按钮，即刻进入游戏。'}
   </p>
 
   <div class="launch-divider"></div>

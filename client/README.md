@@ -29,8 +29,10 @@ client/
 │   ├── constants.js          # 常量(gameInfo / quickPrompts / isTauri)
 │   ├── assets/
 │   └── components/           # 组件化 UI
-│       ├── Scene.svelte      # 背景场景
-│       ├── TopBar.svelte     # 顶部栏(品牌 + 游戏助手入口)
+│       ├── LauncherView.svelte # 普通模式页面(背景 + 欢迎区 + 启动卡片)
+│       ├── AdvancedMode.svelte # 高级模式页面(独立背景与布局,占位待开发,点击左上角图标进入)
+│       ├── Scene.svelte      # 背景场景(普通模式)
+│       ├── TopBar.svelte     # 顶部栏(品牌 + 游戏助手入口 + 模式切换)
 │       ├── HeroSection.svelte# 欢迎区
 │       ├── LaunchCard.svelte # 启动卡片(状态文案区)
 │       ├── LaunchButton.svelte # 启动/下载按钮(含下载波浪动画)

@@ -9,9 +9,15 @@
 
 <header class="topbar">
   <div class="brand-lockup">
-    <div class="brand-mark" aria-hidden="true">
+    <button
+      class="brand-mark"
+      type="button"
+      title="打开高级模式"
+      aria-label="打开高级模式"
+      on:click={() => dispatch('toggleAdvanced')}
+    >
       <Box size={19} strokeWidth={2.3} />
-    </div>
+    </button>
     <p>{gameName}</p>
   </div>
   <button class="assistant-trigger" type="button" title="打开游戏助手" on:click={() => dispatch('openAssistant')}>

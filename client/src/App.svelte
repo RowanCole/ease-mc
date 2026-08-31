@@ -2,15 +2,26 @@
   import { onMount } from 'svelte'
   import { invoke } from '@tauri-apps/api/core'
   import { listen } from '@tauri-apps/api/event'
+  import { fade, fly } from 'svelte/transition'
+  import { cubicOut } from 'svelte/easing'
   import './App.css'
 
   import { gameInfo, isTauri } from './constants.js'
-  import Scene from './components/Scene.svelte'
   import TopBar from './components/TopBar.svelte'
-  import HeroSection from './components/HeroSection.svelte'
-  import LaunchCard from './components/LaunchCard.svelte'
+  import LauncherView from './components/LauncherView.svelte'
+  import AdvancedMode from './components/AdvancedMode.svelte'
   import ChatPanel from './components/ChatPanel.svelte'
   import ToastStack from './components/ToastStack.svelte'
+
+  // 当前界面：launcher 普通模式 / advanced 高级模式（占位页，待开发）
+  let currentView = 'launcher'
+
+  // 模式切换动画时长（尊重系统「减少动态效果」设置）
+  const reduceMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const viewInDuration = reduceMotion ? 0 : 320
+  const viewOutDuration = reduceMotion ? 0 : 160
 
   let status = 'idle'
   let statusText = '正在检查游戏状态...'
@@ -62,6 +73,11 @@
     showChat = true
   }
 
+  // 左上角图标：主界面 ⇄ 高级模式
+  function toggleAdvanced() {
+    currentView = currentView === 'advanced' ? 'launcher' : 'advanced'
+  }
+
   // 下载游戏，启动检查与手动重试共用
   async function downloadGame() {
     if (!isTauri) {
@@ -107,7 +123,7 @@
     }
   }
 
-  // 应用启动时检查游戏是否已安装，未安装则自动下载
+  // 应用启动时检查游戏是否已安装，未安装则等待用户点击「下载游戏」按钮触发下载
   async function ensureGameInstalled() {
     if (!isTauri) {
       status = 'ready'
@@ -123,7 +139,8 @@
 
     if (installed === 'false') {
       needDownload = true
-      await downloadGame()
+      status = 'ready'
+      statusText = '游戏尚未安装，点击下方按钮开始下载'
     } else {
       status = 'ready'
       statusText = '游戏下载完成，可以开始冒险了'
@@ -245,25 +262,36 @@
   })
 </script>
 
-<div class="app-shell">
-  <Scene />
+<div class="app-shell" class:advanced={currentView === 'advanced'}>
+  <TopBar gameName={gameInfo.name} on:openAssistant={openChat} on:toggleAdvanced={toggleAdvanced} />
 
-  <TopBar gameName={gameInfo.name} on:openAssistant={openChat} />
-
-  <main class="launcher-main">
-    <HeroSection title={gameInfo.title} subtitle={gameInfo.subtitle} />
-    <LaunchCard
-      {isDownloading}
-      {isPlaying}
-      {needDownload}
-      {downloadPercent}
-      {isExtracting}
-      {statusText}
-      on:action={startGame}
-    />
-  </main>
-
-  <footer class="footer-bar">© {new Date().getFullYear()} {gameInfo.name}</footer>
+  {#if currentView === 'advanced'}
+    <div
+      class="view-layer"
+      in:fly={{ x: 36, duration: viewInDuration, easing: cubicOut }}
+      out:fade={{ duration: viewOutDuration }}
+    >
+      <AdvancedMode on:back={() => (currentView = 'launcher')} />
+    </div>
+  {:else}
+    <div
+      class="view-layer"
+      in:fly={{ x: -36, duration: viewInDuration, easing: cubicOut }}
+      out:fade={{ duration: viewOutDuration }}
+    >
+      <LauncherView
+        title={gameInfo.title}
+        subtitle={gameInfo.subtitle}
+        {isDownloading}
+        {isPlaying}
+        {needDownload}
+        {downloadPercent}
+        {isExtracting}
+        {statusText}
+        on:action={startGame}
+      />
+    </div>
+  {/if}
 
   {#if showChat}
     <ChatPanel
