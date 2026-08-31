@@ -7,7 +7,8 @@
 A zero-setup, one-click Minecraft launcher for beginners.
 
 [![Tauri](https://img.shields.io/badge/Tauri_2-FFC131?style=flat-square&logo=tauri&logoColor=black)](https://tauri.app)
-[![Svelte 5](https://img.shields.io/badge/Svelte_5-FF3E00?style=flat-square&logo=svelte&logoColor=white)](https://svelte.dev)
+[![React 18](https://img.shields.io/badge/React_18-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Rust](https://img.shields.io/badge/Rust-000000?style=flat-square&logo=rust)](https://www.rust-lang.org)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-blue?style=flat-square)](#)
 
@@ -36,7 +37,7 @@ It also ships with a built-in AI game assistant (powered by DeepSeek) that answe
 
 | Layer | Technology |
 |---|---|
-| Frontend | Svelte 5 + Vite 6, `@tauri-apps/api`, `lucide-svelte`, `marked` |
+| Frontend | React 18 + TypeScript + Vite 6, `@tauri-apps/api`, `lucide-react`, `zustand`, `marked` |
 | Backend | Tauri 2 + Rust (`tokio`, `reqwest`, `zip` / `flate2` / `tar`) |
 | AI | `async-openai` calling DeepSeek with streaming responses |
 
@@ -125,23 +126,31 @@ Do not commit this file. If the key is missing, only the AI assistant is disable
 client/
 ├── index.html
 ├── package.json
-├── vite.config.js
-├── src/                      # Svelte frontend
-│   ├── main.js
-│   ├── App.svelte            # Root component: state orchestration + business logic
+├── tsconfig.json
+├── vite.config.ts
+├── src/                      # React + TypeScript frontend
+│   ├── main.tsx              # React entry point
+│   ├── App.tsx               # Root component: layout + game-exited listener
 │   ├── App.css               # Global styles
-│   ├── constants.js          # Constants (gameInfo / quickPrompts / isTauri)
+│   ├── types.ts              # Shared TypeScript types
+│   ├── constants.ts          # Constants (gameInfo / quickPrompts / isTauri)
+│   ├── utils.ts              # Utility helpers (errorText)
 │   ├── assets/
-│   └── components/           # UI components
-│       ├── LauncherView.svelte # Normal mode page (background + hero + launch card)
-│       ├── AdvancedMode.svelte # Advanced mode page (own background & layout; placeholder, click the top-left icon)
-│       ├── Scene.svelte      # Background scene (normal mode)
-│       ├── TopBar.svelte     # Top bar (brand + assistant entry + mode toggle)
-│       ├── HeroSection.svelte# Hero section
-│       ├── LaunchCard.svelte # Launch card (status text)
-│       ├── LaunchButton.svelte # Launch/download button (with wave animation)
-│       ├── ChatPanel.svelte  # AI assistant drawer (message list + input)
-│       └── ToastStack.svelte # Toast notifications
+│   ├── stores/               # Zustand state stores
+│   │   ├── uiStore.ts        # View mode + assistant panel visibility
+│   │   ├── toastStore.ts     # Toast notifications
+│   │   ├── gameStore.ts      # Game status / download / launch logic
+│   │   └── chatStore.ts      # AI assistant streaming chat
+│   └── components/           # Functional components
+│       ├── LauncherView.tsx  # Normal mode page (background + hero + launch card)
+│       ├── AdvancedMode.tsx  # Advanced mode page (own background & layout; placeholder, click the top-left icon)
+│       ├── Scene.tsx         # Background scene (normal mode)
+│       ├── TopBar.tsx        # Top bar (brand + assistant entry + mode toggle)
+│       ├── HeroSection.tsx   # Hero section
+│       ├── LaunchCard.tsx    # Launch card (status text)
+│       ├── LaunchButton.tsx  # Launch/download button (with wave animation)
+│       ├── ChatPanel.tsx     # AI assistant drawer (message list + input)
+│       └── ToastStack.tsx    # Toast notifications
 └── src-tauri/                # Tauri + Rust backend
     ├── tauri.conf.json
     ├── config.json           # Runtime config (see above)

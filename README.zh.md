@@ -7,7 +7,8 @@
 面向新手的零配置、一键式 Minecraft 启动器。
 
 [![Tauri](https://img.shields.io/badge/Tauri_2-FFC131?style=flat-square&logo=tauri&logoColor=black)](https://tauri.app)
-[![Svelte 5](https://img.shields.io/badge/Svelte_5-FF3E00?style=flat-square&logo=svelte&logoColor=white)](https://svelte.dev)
+[![React 18](https://img.shields.io/badge/React_18-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Rust](https://img.shields.io/badge/Rust-000000?style=flat-square&logo=rust)](https://www.rust-lang.org)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-blue?style=flat-square)](#)
 
@@ -36,7 +37,7 @@ EaseMC 是一个开源的 Minecraft 启动器，专注于让新手玩家以最�
 
 | 层 | 技术 |
 |---|---|
-| 前端 | Svelte 5 + Vite 6，`@tauri-apps/api`、`lucide-svelte`、`marked` |
+| 前端 | React 18 + TypeScript + Vite 6，`@tauri-apps/api`、`lucide-react`、`zustand`、`marked` |
 | 后端 | Tauri 2 + Rust（`tokio`、`reqwest`、`zip` / `flate2` / `tar`） |
 | AI | `async-openai` 调用 DeepSeek 流式对话 |
 
@@ -125,23 +126,31 @@ DEEPSEEK_API_KEY=sk-xxxxxxxx
 client/
 ├── index.html
 ├── package.json
-├── vite.config.js
-├── src/                      # Svelte 前端
-│   ├── main.js
-│   ├── App.svelte            # 根组件：状态编排 + 业务逻辑
+├── tsconfig.json
+├── vite.config.ts
+├── src/                      # React + TypeScript 前端
+│   ├── main.tsx              # React 入口
+│   ├── App.tsx               # 根组件：布局 + game-exited 监听
 │   ├── App.css               # 全局样式
-│   ├── constants.js          # 常量（gameInfo / quickPrompts / isTauri）
+│   ├── types.ts              # 共享 TypeScript 类型
+│   ├── constants.ts          # 常量（gameInfo / quickPrompts / isTauri）
+│   ├── utils.ts              # 工具函数（errorText）
 │   ├── assets/
-│   └── components/           # 组件化 UI
-│       ├── LauncherView.svelte # 普通模式页面（背景 + 欢迎区 + 启动卡片）
-│       ├── AdvancedMode.svelte # 高级模式页面（独立背景与布局，占位待开发，点击左上角图标进入）
-│       ├── Scene.svelte      # 背景场景（普通模式）
-│       ├── TopBar.svelte     # 顶部栏（品牌 + 游戏助手入口 + 模式切换）
-│       ├── HeroSection.svelte# 欢迎区
-│       ├── LaunchCard.svelte # 启动卡片（状态文案区）
-│       ├── LaunchButton.svelte # 启动/下载按钮（含下载波浪动画）
-│       ├── ChatPanel.svelte  # AI 助手抽屉（消息列表 + 输入框）
-│       └── ToastStack.svelte # 弹窗通知
+│   ├── stores/               # Zustand 状态管理
+│   │   ├── uiStore.ts        # 视图切换 + 游戏助手面板开关
+│   │   ├── toastStore.ts     # 弹窗通知
+│   │   ├── gameStore.ts      # 游戏状态 / 下载 / 启动逻辑
+│   │   └── chatStore.ts      # AI 助手流式对话
+│   └── components/           # 函数组件
+│       ├── LauncherView.tsx  # 普通模式页面（背景 + 欢迎区 + 启动卡片）
+│       ├── AdvancedMode.tsx  # 高级模式页面（独立背景与布局，占位待开发，点击左上角图标进入）
+│       ├── Scene.tsx         # 背景场景（普通模式）
+│       ├── TopBar.tsx        # 顶部栏（品牌 + 游戏助手入口 + 模式切换）
+│       ├── HeroSection.tsx   # 欢迎区
+│       ├── LaunchCard.tsx    # 启动卡片（状态文案区）
+│       ├── LaunchButton.tsx  # 启动/下载按钮（含下载波浪动画）
+│       ├── ChatPanel.tsx     # AI 助手抽屉（消息列表 + 输入框）
+│       └── ToastStack.tsx    # 弹窗通知
 └── src-tauri/                # Tauri + Rust 后端
     ├── tauri.conf.json
     ├── config.json           # 运行时配置（见上文）
