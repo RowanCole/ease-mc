@@ -4,6 +4,10 @@ mod config;
 mod download;
 mod game;
 mod jre;
+mod manifest;
+mod net;
+mod paths;
+mod progress;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

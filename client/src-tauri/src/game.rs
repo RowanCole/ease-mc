@@ -5,7 +5,8 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 use tracing::{debug, error, info};
 
-use crate::download::game_path;
+use crate::manifest;
+use crate::paths::game_path;
 
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
@@ -59,7 +60,14 @@ pub fn launch_game(app: AppHandle) -> Result<(), String> {
     if lib_dir.exists() {
         collect_jars(&lib_dir, &minecraft_path, &mut classpath)?;
     }
-    classpath.push("versions/1.21.1/1.21.1.jar".to_string());
+
+    // 版本/资源索引等参数统一来自 game.json（manifest），避免硬编码漂移
+    let manifest_json = manifest::load_embedded()?;
+    let version_id = manifest::version_id(&manifest_json)?;
+    let asset_index_id = manifest::asset_index_id(&manifest_json)?;
+    let client_jar = format!("versions/{version_id}/{version_id}.jar");
+
+    classpath.push(client_jar);
     debug!("classpath 共 {} 个 jar", classpath.len());
   
     let cp = classpath.join(if cfg!(windows) { ";" } else { ":" });
@@ -68,36 +76,39 @@ pub fn launch_game(app: AppHandle) -> Result<(), String> {
 
     #[cfg(target_os = "macos")]
     game_cmd.arg("-XstartOnFirstThread");
-    game_cmd.args([
-        "-XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump",
-        "-Djava.library.path=natives",
-        "-Djna.tmpdir=natives",
-        "-Dorg.lwjgl.system.SharedLibraryExtractPath=natives",
-        "-Dio.netty.native.workdir=natives",
-        "-Dminecraft.launcher.brand=manual",
-        "-Dminecraft.launcher.version=1.21.1",
-        "-cp",
-        &cp,
-        "net.minecraft.client.main.Main",
-        "--username",
-        "Steve",
-        "--version",
-        "1.21.1",
-        "--gameDir",
-        ".",
-        "--assetsDir",
-        "assets",
-        "--assetIndex",
-        "17",
-        "--uuid",
-        "00000000-0000-0000-0000-000000000000",
-        "--accessToken",
-        "0",
-        "--userType",
-        "mojang",
-        "--versionType",
-        "release",
-    ]);
+
+    // 启动参数：version/assetIndex 等来自 manifest，其余为固定 JVM/客户端参数
+    let args: Vec<String> = vec![
+        "-XX:HeapDumpPath=MojangTricksIntelDriversForPerformance_javaw.exe_minecraft.exe.heapdump".into(),
+        "-Djava.library.path=natives".into(),
+        "-Djna.tmpdir=natives".into(),
+        "-Dorg.lwjgl.system.SharedLibraryExtractPath=natives".into(),
+        "-Dio.netty.native.workdir=natives".into(),
+        "-Dminecraft.launcher.brand=manual".into(),
+        format!("-Dminecraft.launcher.version={version_id}"),
+        "-cp".into(),
+        cp,
+        "net.minecraft.client.main.Main".into(),
+        "--username".into(),
+        "Steve".into(),
+        "--version".into(),
+        version_id.clone(),
+        "--gameDir".into(),
+        ".".into(),
+        "--assetsDir".into(),
+        "assets".into(),
+        "--assetIndex".into(),
+        asset_index_id,
+        "--uuid".into(),
+        "00000000-0000-0000-0000-000000000000".into(),
+        "--accessToken".into(),
+        "0".into(),
+        "--userType".into(),
+        "mojang".into(),
+        "--versionType".into(),
+        "release".into(),
+    ];
+    game_cmd.args(args);
     game_cmd.current_dir(&minecraft_path);
 
     #[cfg(windows)]
@@ -107,7 +118,7 @@ pub fn launch_game(app: AppHandle) -> Result<(), String> {
         .map_err(|e| format!("Failed to launch game: {}", e))?;
 
     let pid = game.id();
-    info!("游戏进程已启动 (PID: {})", pid);
+    info!("游戏进程已启动 (PID: {}, version: {})", pid, version_id);
 
     *GAME.lock().map_err(|e| e.to_string())? = Some(game);
 

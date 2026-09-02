@@ -1,10 +1,10 @@
 use std::path::Path;
 
 use reqwest::Client;
-use tauri::Emitter;
 use tracing::{debug, info};
 
-use crate::download::download_file;
+use crate::net::download_file;
+use crate::progress::ProgressCtx;
 
 fn extract_archive(archive_path: &Path, dest_dir: &Path) -> Result<(), String> {
     let ext = archive_path
@@ -48,11 +48,11 @@ pub async fn download_jre(
     let archive_name = if cfg!(windows) { ".jre-download.zip" } else { ".jre-download.tar.gz" };
     let archive_path = game_dir.join(archive_name);
     // JRE 是单文件，用响应 Content-Length 实时上报 90% → 100% 的平滑进度
-    let progress = app.map(|a| crate::download::ProgressCtx::new(a.clone(), 90.0, 100.0, 0));
+    let progress = app.map(|a| ProgressCtx::new(a.clone(), 90.0, 100.0, 0));
     download_file(client, &url, &archive_path, progress.as_ref()).await?;
     // 兜底：Content-Length 缺失时进度可能未推进，强制收敛到 100%
-    if let Some(app) = app {
-        let _ = app.emit("download-progress", serde_json::json!({ "percent": 100.0 }));
+    if let Some(p) = progress.as_ref() {
+        p.finish();
     }
 
     // 解压到临时目录，避免与 game 目录已有内容冲突
