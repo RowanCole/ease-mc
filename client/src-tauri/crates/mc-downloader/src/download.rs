@@ -1,16 +1,14 @@
 // 下载编排层：把「清单解析（manifest）」「HTTP 下载（net）」「JRE 安装（jre）」
-// 组装成一条『一键安装』命令。本身不再包含传输细节。
+// 组装成一条『一键安装』流程。本身不再包含传输细节。
 use std::path::Path;
 
 use reqwest::Client;
 use tauri::Emitter;
 use tracing::info;
 
-use crate::config::set_config;
+use mc_core::{config::set_config, manifest, paths::game_path};
 use crate::jre::download_jre;
-use crate::manifest;
 use crate::net::{self, DownloadTask};
-use crate::paths::game_path;
 use crate::progress::ProgressCtx;
 
 const MAX_CONCURRENT_DOWNLOADS: usize = 8;
@@ -77,8 +75,7 @@ pub async fn download_game_files(
     Ok(())
 }
 
-/// 『一键安装』命令：下载游戏文件 → 下载并解压 JRE → 标记安装完成。
-#[tauri::command]
+/// 『一键安装』流程：下载游戏文件 → 下载并解压 JRE → 标记安装完成。
 pub async fn download_game(app: tauri::AppHandle) -> Result<(), String> {
     info!("=== 开始游戏下载流程 ===");
     let client = Client::new();
@@ -101,7 +98,7 @@ pub async fn download_game(app: tauri::AppHandle) -> Result<(), String> {
     let _ = app.emit("download-progress", serde_json::json!({ "percent": 100.0 }));
 
     // 4. 标记安装完成
-    set_config(app, "gameIsInstalled", "true")?;
+    set_config(Some(&app), "gameIsInstalled", "true")?;
     info!("=== 游戏下载流程完成 ===");
     Ok(())
 }
@@ -114,13 +111,8 @@ mod tests {
     async fn download_game_files_to_game_dir() {
         let client = Client::new();
 
-        // game.json 位于 src/ 下，以 crate 根目录（client/src-tauri）定位
-        let manifest_path = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("src")
-            .join("game.json");
-        let content = std::fs::read_to_string(&manifest_path).expect("读取 game.json 失败");
-        let manifest_json: serde_json::Value =
-            serde_json::from_str(&content).expect("解析 game.json 失败");
+        // 版本清单由 mc-core 编译期嵌入
+        let manifest_json = mc_core::manifest::load_embedded().expect("解析 game.json 失败");
 
         // 与 launch_game 使用的目录结构保持一致：./game/.minecraft
         let game_dir = Path::new("game").join(".minecraft");

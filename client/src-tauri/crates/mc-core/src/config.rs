@@ -26,12 +26,8 @@ fn ensure_config_file(app: &tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-#[tauri::command]
-pub fn get_config(app: tauri::AppHandle, key: &str) -> Result<String, String> {
-    get_config_inner(Some(&app), key)
-}
-
-pub fn get_config_inner(app: Option<&tauri::AppHandle>, key: &str) -> Result<String, String> {
+/// 读取配置值（app 为 None 时回退当前目录，供测试/无窗口上下文场景使用）
+pub fn get_config(app: Option<&tauri::AppHandle>, key: &str) -> Result<String, String> {
     if let Some(handle) = app {
         ensure_config_file(handle)?;
     }
@@ -50,17 +46,8 @@ pub fn get_config_inner(app: Option<&tauri::AppHandle>, key: &str) -> Result<Str
     Ok(value)
 }
 
-#[tauri::command]
-pub fn set_config(app: tauri::AppHandle, key: &str, value: &str) -> Result<(), String> {
-    set_config_inner(Some(&app), key, value)
-}
-
 /// 写入配置值（app 为 None 时回退当前目录，供测试/无窗口上下文场景使用）
-pub fn set_config_inner(
-    app: Option<&tauri::AppHandle>,
-    key: &str,
-    value: &str,
-) -> Result<(), String> {
+pub fn set_config(app: Option<&tauri::AppHandle>, key: &str, value: &str) -> Result<(), String> {
     if let Some(handle) = app {
         ensure_config_file(handle)?;
     }

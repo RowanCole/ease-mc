@@ -1,11 +1,12 @@
 // Minecraft 版本清单解析：从编译期嵌入的 game.json 提取元数据与下载任务。
 // 全项目唯一的版本数据源（下载侧与启动侧共用，避免硬编码 1.21.1 / assetIndex）。
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 use tracing::info;
 
-use crate::net::DownloadTask;
+/// 单个下载任务：(目标 URL, 落盘路径, 预期大小字节)
+pub type DownloadTask = (String, PathBuf, u64);
 
 /// 编译期嵌入的 Minecraft 1.21.1 版本清单
 pub const EMBEDDED_MANIFEST: &str = include_str!("game.json");

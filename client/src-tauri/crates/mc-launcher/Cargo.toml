@@ -1,0 +1,10 @@
+[package]
+name = "mc-launcher"
+version = "0.1.0"
+description = "EaseMC 启动域：拉起与结束 Minecraft 进程"
+edition = "2021"
+
+[dependencies]
+tauri = { workspace = true }
+tracing = { workspace = true }
+mc-core = { path = "../mc-core" }

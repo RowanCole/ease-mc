@@ -1,16 +1,28 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/mc-core",
+    "crates/mc-downloader",
+    "crates/mc-launcher",
+    "crates/mc-assistant",
+]
+
+[workspace.dependencies]
+tauri = { version = "2", features = [] }
+serde_json = "1"
+reqwest = { version = "0.12", features = ["stream"] }
+tracing = "0.1"
+tokio = { version = "1", features = ["fs", "io-util"] }
+futures-util = "0.3"
+
 [package]
 name = "mc-starter"
 version = "0.1.0"
-description = "A Tauri App"
+description = "EaseMC Tauri 应用壳：窗口入口与命令转发"
 authors = ["you"]
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [lib]
-# The `_lib` suffix may seem redundant but it is necessary
-# to make the lib name unique and wouldn't conflict with the bin name.
-# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
 name = "mc_starter_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
@@ -18,16 +30,11 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
-serde_json = "1"
-reqwest = { version = "0.12", features = ["stream"] }
-tracing = "0.1"
+tauri = { workspace = true }
+tracing = { workspace = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "chrono"] }
-tokio = { version = "1", features = ["fs", "io-util"] }
-futures-util = "0.3"
-zip = "0.5"
-flate2 = "1"
-tar = "0.4"
-async-openai = { version = "0.41.3", features = ["chat-completion"] }
 dotenv = "0.15.0"
-
+mc-core = { path = "crates/mc-core" }
+mc-downloader = { path = "crates/mc-downloader" }
+mc-launcher = { path = "crates/mc-launcher" }
+mc-assistant = { path = "crates/mc-assistant" }

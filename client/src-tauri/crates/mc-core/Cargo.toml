@@ -1,0 +1,10 @@
+[package]
+name = "mc-core"
+version = "0.1.0"
+description = "EaseMC 基础能力：运行路径、配置读写、版本清单"
+edition = "2021"
+
+[dependencies]
+tauri = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }

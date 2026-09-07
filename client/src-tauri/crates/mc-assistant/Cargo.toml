@@ -1,0 +1,15 @@
+[package]
+name = "mc-assistant"
+version = "0.1.0"
+description = "EaseMC AI 助手域：DeepSeek 流式对话"
+edition = "2021"
+
+[dependencies]
+tauri = { workspace = true }
+futures-util = { workspace = true }
+tracing = { workspace = true }
+async-openai = { version = "0.41.3", features = ["chat-completion"] }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+dotenv = "0.15"

@@ -151,19 +151,19 @@ client/
 │       ├── LaunchButton.tsx  # 启动/下载按钮（含下载波浪动画）
 │       ├── ChatPanel.tsx     # AI 助手抽屉（消息列表 + 输入框）
 │       └── ToastStack.tsx    # 弹窗通知
-└── src-tauri/                # Tauri + Rust 后端
+└── src-tauri/                    # Tauri + Rust 后端（Cargo workspace 多 crate）
     ├── tauri.conf.json
-    ├── config.json           # 运行时配置（见上文）
+    ├── config.json               # 运行时配置（见上文）
     ├── capabilities/default.json
-    └── src/
-        ├── main.rs           # 入口：日志与 dotenv 初始化
-        ├── lib.rs            # Tauri 命令注册
-        ├── game.rs           # 启动 / 结束 Minecraft 进程
-        ├── download.rs       # 游戏文件下载（镜像加速、并发、进度事件）
-        ├── jre.rs            # 下载并解压 JRE
-        ├── chat.rs           # DeepSeek 流式 AI 助手
-        ├── config.rs         # 读取 / 写入配置
-        └── game.json         # Minecraft 1.21.1 版本清单（编译期嵌入）
+    ├── src/                      # 应用壳：窗口入口 + 命令转发
+    │   ├── main.rs               # 入口：日志与 dotenv 初始化
+    │   └── lib.rs                # #[tauri::command] 定义，业务转发到各领域 crate
+    └── crates/
+        ├── mc-core/              # 基础能力：运行路径、配置读写、版本清单
+        │   └── src/game.json     # Minecraft 1.21.1 版本清单（编译期嵌入）
+        ├── mc-downloader/        # 下载域：HTTP 传输（镜像加速、并发、进度）、游戏文件与 JRE 安装
+        ├── mc-launcher/          # 启动域：拉起 / 结束 Minecraft 进程
+        └── mc-assistant/         # AI 助手域：DeepSeek 流式对话
 ```
 
 ## 已知限制

@@ -2172,22 +2172,64 @@ dependencies = [
 ]
 
 [[package]]
-name = "mc-starter"
+name = "mc-assistant"
 version = "0.1.0"
 dependencies = [
  "async-openai",
  "dotenv",
+ "futures-util",
+ "tauri",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "mc-core"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "tauri",
+ "tracing",
+]
+
+[[package]]
+name = "mc-downloader"
+version = "0.1.0"
+dependencies = [
  "flate2",
  "futures-util",
+ "mc-core",
  "reqwest 0.12.28",
  "serde_json",
  "tar",
  "tauri",
- "tauri-build",
  "tokio",
  "tracing",
- "tracing-subscriber",
  "zip",
+]
+
+[[package]]
+name = "mc-launcher"
+version = "0.1.0"
+dependencies = [
+ "mc-core",
+ "tauri",
+ "tracing",
+]
+
+[[package]]
+name = "mc-starter"
+version = "0.1.0"
+dependencies = [
+ "dotenv",
+ "mc-assistant",
+ "mc-core",
+ "mc-downloader",
+ "mc-launcher",
+ "tauri",
+ "tauri-build",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

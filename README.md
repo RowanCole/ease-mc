@@ -151,19 +151,19 @@ client/
 │       ├── LaunchButton.tsx  # Launch/download button (with wave animation)
 │       ├── ChatPanel.tsx     # AI assistant drawer (message list + input)
 │       └── ToastStack.tsx    # Toast notifications
-└── src-tauri/                # Tauri + Rust backend
+└── src-tauri/                    # Tauri + Rust backend (Cargo workspace)
     ├── tauri.conf.json
-    ├── config.json           # Runtime config (see above)
+    ├── config.json               # Runtime config (see above)
     ├── capabilities/default.json
-    └── src/
-        ├── main.rs           # Entry point: logging + dotenv init
-        ├── lib.rs            # Tauri command registration
-        ├── game.rs           # Launch / stop the Minecraft process
-        ├── download.rs       # Game file downloads (mirrors, concurrency, progress events)
-        ├── jre.rs            # Download & extract the JRE
-        ├── chat.rs           # DeepSeek streaming AI assistant
-        ├── config.rs         # Read / write config
-        └── game.json         # Minecraft 1.21.1 version manifest (embedded at compile time)
+    ├── src/                      # App shell: window entry + command forwarding
+    │   ├── main.rs               # Entry point: logging + dotenv init
+    │   └── lib.rs                # #[tauri::command] definitions delegating to domain crates
+    └── crates/
+        ├── mc-core/              # Foundations: runtime paths, config read/write, version manifest
+        │   └── src/game.json     # Minecraft 1.21.1 version manifest (embedded at compile time)
+        ├── mc-downloader/        # Download domain: HTTP transfer (mirrors, concurrency, progress), game files & JRE install
+        ├── mc-launcher/          # Launch domain: start / stop the Minecraft process
+        └── mc-assistant/         # AI assistant domain: DeepSeek streaming chat
 ```
 
 ## Known Limitations

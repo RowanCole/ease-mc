@@ -116,7 +116,6 @@ async fn stream_chat(user_message: &str, mut on_text: impl FnMut(&str)) -> Resul
     Ok(full)
 }
 
-#[tauri::command]
 pub async fn send_messages_to_mode(app: tauri::AppHandle, message: String) -> Result<String, String> {
     let reply = stream_chat(&message, |chunk| {
         let _ = app.emit("chat-chunk", chunk);

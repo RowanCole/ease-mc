@@ -1,0 +1,20 @@
+[package]
+name = "mc-downloader"
+version = "0.1.0"
+description = "EaseMC 下载域：HTTP 传输、进度上报、游戏文件与 JRE 安装"
+edition = "2021"
+
+[dependencies]
+tauri = { workspace = true }
+serde_json = { workspace = true }
+reqwest = { workspace = true }
+tokio = { workspace = true }
+futures-util = { workspace = true }
+tracing = { workspace = true }
+zip = "0.5"
+flate2 = "1"
+tar = "0.4"
+mc-core = { path = "../mc-core" }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

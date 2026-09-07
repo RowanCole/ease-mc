@@ -5,8 +5,7 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 use tracing::{debug, error, info};
 
-use crate::manifest;
-use crate::paths::game_path;
+use mc_core::{manifest, paths::game_path};
 
 #[cfg(windows)]
 use std::os::windows::process::CommandExt;
@@ -31,12 +30,9 @@ fn collect_jars(dir: &Path, base: &Path, jars: &mut Vec<String>) -> Result<(), S
         }
     }
 
-    
     Ok(())
-    
 }
 
-#[tauri::command]
 pub fn launch_game(app: AppHandle) -> Result<(), String> {
     let cwd = game_path()?;
     let minecraft_path = cwd.join(".minecraft");
@@ -54,7 +50,6 @@ pub fn launch_game(app: AppHandle) -> Result<(), String> {
         return Err(format!(".minecraft directory not found at {:?}", minecraft_path));
     }
 
- 
     let mut classpath: Vec<String> = Vec::new();
     let lib_dir = minecraft_path.join("libraries");
     if lib_dir.exists() {
@@ -69,7 +64,7 @@ pub fn launch_game(app: AppHandle) -> Result<(), String> {
 
     classpath.push(client_jar);
     debug!("classpath 共 {} 个 jar", classpath.len());
-  
+
     let cp = classpath.join(if cfg!(windows) { ";" } else { ":" });
 
     let mut game_cmd = Command::new(java.to_str().unwrap());
@@ -155,7 +150,6 @@ pub fn launch_game(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-#[tauri::command]
 pub fn close_game() -> Result<(), String> {
     let child = GAME.lock().map_err(|e| e.to_string())?.take();
     if let Some(child) = child {
