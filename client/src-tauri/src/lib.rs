@@ -26,16 +26,30 @@ async fn send_messages_to_mode(app: tauri::AppHandle, message: String) -> Result
     mc_assistant::chat::send_messages_to_mode(app, message).await
 }
 
+use tauri::{WindowEvent, tray::TrayIconBuilder};
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![
+    let mut builder =tauri::Builder::default();
+        builder = builder.setup(|app|{
+            TrayIconBuilder::new()
+                .icon(app.default_window_icon().unwrap().clone())
+                .tooltip("EaseMC")
+                .build(app)?;
+            Ok(())
+        });
+        builder = builder.invoke_handler(tauri::generate_handler![
             launch_game,
             close_game,
             get_config,
             download_game,
             send_messages_to_mode
-        ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        ]);
+        builder = builder.on_window_event(|window,evevt|{
+            if let WindowEvent::CloseRequested { api, .. } = evevt {
+                api.prevent_close();
+                let _ = window.hide();
+            }
+        });
+        builder.run(tauri::generate_context!()).expect("error while running tauri application");
 }
