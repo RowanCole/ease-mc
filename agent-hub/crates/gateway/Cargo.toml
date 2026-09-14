@@ -1,0 +1,33 @@
+[package]
+name = "gateway"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "AgentHub 网关：路由、认证中间件、请求转发与 Agent 负载均衡"
+
+[lints]
+workspace = true
+
+[dependencies]
+agent = { workspace = true }
+auth = { workspace = true }
+common = { workspace = true }
+registry = { workspace = true }
+
+axum = { workspace = true }
+bytes = { workspace = true }
+futures = { workspace = true }
+http = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+http-body-util = { workspace = true }
+wiremock = { workspace = true }

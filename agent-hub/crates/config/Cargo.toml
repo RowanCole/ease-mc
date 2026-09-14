@@ -1,0 +1,22 @@
+[package]
+name = "config"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "AgentHub 配置加载：默认值 + 配置文件 + 环境变量合并"
+
+[lints]
+workspace = true
+
+[dependencies]
+common = { workspace = true }
+
+config_rs = { workspace = true }
+dotenvy = { workspace = true }
+secrecy = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

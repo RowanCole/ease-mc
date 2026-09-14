@@ -1,0 +1,24 @@
+[global]
+level = "info"
+ansi = true
+span_events = "none"
+
+[[appender]]
+name = "stdout"
+kind = "stdout"
+enabled = true
+
+[appender.formatter]
+type = "logback"
+pattern = "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%-10.15t] %-10.40logger{39} : %msg%n%ex"
+
+[[appender]]
+name = "file"
+kind = "file"
+enabled = true
+path = "logs/app.log"
+level = "info"
+
+[appender.formatter]
+type = "logback"
+pattern = "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%-10.15t] %-10.40logger{39} : %msg%n%ex"

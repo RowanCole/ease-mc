@@ -1,0 +1,25 @@
+[package]
+name = "server"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "AgentHub 服务入口：装配配置、可观测性、存储、注册中心与网关"
+
+[lints]
+workspace = true
+
+[dependencies]
+axum = { workspace = true }
+auth = { workspace = true }
+common = { workspace = true }
+config = { workspace = true }
+gateway = { workspace = true }
+observability = { workspace = true }
+registry = { workspace = true }
+storage = { workspace = true }
+
+anyhow = { workspace = true }
+dotenvy = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }

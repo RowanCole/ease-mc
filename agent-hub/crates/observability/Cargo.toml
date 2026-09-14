@@ -1,0 +1,20 @@
+[package]
+name = "observability"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "AgentHub 可观测性：日志初始化、指标采集与 Prometheus 导出"
+
+[lints]
+workspace = true
+
+[dependencies]
+metrics = { workspace = true }
+metrics-exporter-prometheus = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-appender = { workspace = true }
+tracing-subscriber = { workspace = true }
+tracing-declarative = { workspace = true }
