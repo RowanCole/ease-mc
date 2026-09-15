@@ -10,7 +10,7 @@ enabled = true
 
 [appender.formatter]
 type = "logback"
-pattern = "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%-10.15t] %-10.40logger{39} : %msg%n%ex"
+pattern = "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%-10.15t] %-10.40logger{39} : %msg %kvp%n%ex"
 
 [[appender]]
 name = "file"
@@ -21,4 +21,4 @@ level = "info"
 
 [appender.formatter]
 type = "logback"
-pattern = "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%-10.15t] %-10.40logger{39} : %msg%n%ex"
+pattern = "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%-10.15t] %-10.40logger{39} : %msg %kvp%n%ex"

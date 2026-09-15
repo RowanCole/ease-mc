@@ -1,0 +1,18 @@
+# Rust 构建产物
+/target
+
+# 环境变量（含密钥，禁止入库；.env.example 作为模板保留）
+.env
+.env.local
+.env.*.local
+
+# 日志
+/logs
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp

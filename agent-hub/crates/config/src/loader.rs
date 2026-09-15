@@ -7,16 +7,12 @@ use config_rs::{Config, Environment, File, Value};
 
 use crate::settings::AgentHubSettings;
 
-/// 按优先级加载配置：默认值 < 配置文件 < 环境变量。
-///
 /// 配置文件路径取环境变量 `AGENTHUB_CONFIG_FILE`（可选，支持 toml/yaml/json）。
 pub fn load() -> Result<AgentHubSettings> {
     let path = std::env::var("AGENTHUB_CONFIG_FILE").ok();
     load_from(path.as_deref())
 }
 
-/// 从指定路径加载配置文件（测试/调试辅助；`None` 时仅环境变量 + 默认值）。
-///
 /// 文件缺失时降级为「默认值 + 环境变量」，不视为错误。
 pub fn load_from(config_file: Option<&str>) -> Result<AgentHubSettings> {
     let mut builder = Config::builder();
@@ -32,8 +28,11 @@ pub fn load_from(config_file: Option<&str>) -> Result<AgentHubSettings> {
     }
 
     // 环境变量：AGENTHUB_<SECTION>__<FIELD>
+    // prefix_separator 必须显式设为 "_"，否则它会默认取 separator("__")，
+    // 使前缀变成 "agenthub__"，导致 AGENTHUB_XXX 系列变量全部被跳过。
     builder = builder.add_source(
         Environment::with_prefix("AGENTHUB")
+            .prefix_separator("_")
             .separator("__")
             .try_parsing(true),
     );
