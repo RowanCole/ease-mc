@@ -1,0 +1,16 @@
+[package]
+name = "external"
+version = "0.1.0"
+description = "第三方服务封装"
+edition = "2021"
+
+[dependencies]
+tauri = { workspace = true }
+futures-util = { workspace = true }
+tracing = { workspace = true }
+async-openai = { version = "0.41.3", features = ["chat-completion"] }
+reqwest = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+dotenv = "0.15"

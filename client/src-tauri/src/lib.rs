@@ -1,6 +1,3 @@
-// Tauri 应用壳：仅负责窗口入口与命令转发，业务逻辑实现在各领域 crate 中。
-// 命令名与前端 invoke() 的约定保持不变。
-
 #[tauri::command]
 fn launch_game(app: tauri::AppHandle) -> Result<(), String> {
     mc_launcher::game::launch_game(app)
