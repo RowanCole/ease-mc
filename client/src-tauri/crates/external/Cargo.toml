@@ -10,7 +10,13 @@ futures-util = { workspace = true }
 tracing = { workspace = true }
 async-openai = { version = "0.41.3", features = ["chat-completion"] }
 reqwest = { workspace = true }
+hmac = "0.12"
+sha1 = "0.10"
+hex = "0.4" 
+
+
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 dotenv = "0.15"
+
