@@ -11,7 +11,7 @@ reqwest = { workspace = true }
 tokio = { workspace = true }
 futures-util = { workspace = true }
 tracing = { workspace = true }
-zip = "0.5"
+zip = "8.6.0"
 flate2 = "1"
 tar = "0.4"
 mc-core = { path = "../mc-core" }

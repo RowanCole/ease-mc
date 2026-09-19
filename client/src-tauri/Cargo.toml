@@ -38,3 +38,4 @@ mc-core = { path = "crates/mc-core" }
 mc-downloader = { path = "crates/mc-downloader" }
 mc-launcher = { path = "crates/mc-launcher" }
 mc-assistant = { path = "crates/mc-assistant" }
+external = { path = "crates/external" }
