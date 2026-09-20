@@ -2,10 +2,6 @@ use std::collections::HashMap;
 
 use tauri::path;
 
-const COS_REGION: &str = "ap-beijing";
-const COS_BUCKET: &str = "ease-mc-1257344929";
-const COS_SECRET_ID: &str = "AKIDa1X5X000000000000000000000000000";
-const COS_SECRET_KEY: &str = "00000000000000000000000000000000";
 
 pub struct CosClient {
     secret_id: String,
@@ -35,13 +31,13 @@ impl CosClient {
 
     fn generate_time_params(&self) -> String {
         use std::time::{SystemTime, UNIX_EPOCH};
-        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
-        let end = start + 70000;
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let end = start + 3600;
         format!("{};{}", start, end)
     }
 
-    fn process_list(&self, params: Option<&HashMap<String, String>>) -> (String, String) {
-        if let Some(params) = params {
+    fn process_list(&self, params_map: Option<&HashMap<String, String>>) -> (String, String) {
+        if let Some(params) = params_map {
             let mut sorted_params: Vec<_> = params.iter().collect();
             sorted_params.sort_by_key(|(k, _)| *k);
             let mut url_param_list = vec![];
@@ -72,8 +68,8 @@ impl CosClient {
 
     fn build_StringToSign(&self, key_time: &str, http_string: &str) -> String {
         use sha1::{Digest,Sha1};
-        let mut hasher = Sha1::digest(http_string);
-        format!("sha1\n{}\n{}\n", key_time, hex::encode(hasher))
+        let mut result = Sha1::digest(http_string);
+        format!("sha1\n{}\n{}\n", key_time, hex::encode(result))
     }
 
     fn build_Signature(&self, sign_key: &str, string_to_sign: &str) -> String {
@@ -85,7 +81,6 @@ impl CosClient {
         let result = mac.finalize();
         hex::encode(result.into_bytes())
     }
-    
 
     fn calculate_signature(&self, 
         method: &str,
@@ -106,13 +101,14 @@ impl CosClient {
 
     fn build_authorization(
         &self,
-        q_key_time: &str,
-        q_sign_time: &str,
-        url_param_list: &str,
-        signature: &str,
+        method: &str,
+        path: &str,
+        params: Option<&HashMap<String, String>>,
+        headers: Option<&HashMap<String, String>>,
     ) -> String {
-        // TODO: 实现 Authorization 字符串构建
-        todo!()
+
+        let signature = self.calculate_signature(method, path, params, headers);
+        format!("Authorization: {}",signature)
     }
 
     // 最简单的下载接口（无查询参数）
