@@ -4,12 +4,9 @@
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, fmt};
-use dotenv::dotenv;
 
 
 fn main() {
-
-    dotenv().ok();
 
     tracing_subscriber::registry()
         .with(

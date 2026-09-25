@@ -33,7 +33,6 @@ tauri-build = { version = "2", features = [] }
 tauri = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "chrono"] }
-dotenv = "0.15.0"
 mc-core = { path = "crates/mc-core" }
 mc-downloader = { path = "crates/mc-downloader" }
 mc-launcher = { path = "crates/mc-launcher" }

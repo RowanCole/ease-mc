@@ -9,7 +9,7 @@ tauri = { workspace = true }
 futures-util = { workspace = true }
 tracing = { workspace = true }
 async-openai = { version = "0.41.3", features = ["chat-completion"] }
+mc-core = { path = "../mc-core" }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
-dotenv = "0.15"

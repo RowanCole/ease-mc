@@ -5,6 +5,7 @@ use tracing::{debug, info};
 
 use crate::net::download_file;
 use crate::progress::ProgressCtx;
+use crate::source::{resolve_config_url, CosSource};
 
 fn extract_archive(archive_path: &Path, dest_dir: &Path) -> Result<(), String> {
     let ext = archive_path
@@ -38,17 +39,20 @@ fn extract_archive(archive_path: &Path, dest_dir: &Path) -> Result<(), String> {
 pub async fn download_jre(
     client: &Client,
     game_dir: &Path,
+    cos: Option<&CosSource>,
     app: Option<&tauri::AppHandle>,
 ) -> Result<(), String> {
     let key = if cfg!(windows) { "winJrePath" } else { "macJrePath" };
-    let url = mc_core::config::get_config(app, key)?;
+    let value = mc_core::config::get_config(app, key)?;
+    let url = resolve_config_url(cos, &value, key)?;
     info!("开始下载 JRE（配置项: {}）", key);
+    info!("JRE 下载地址: {}", url);
 
     // 下载到临时文件（Windows 为 zip，macOS 为 tar.gz）
     let archive_name = if cfg!(windows) { ".jre-download.zip" } else { ".jre-download.tar.gz" };
     let archive_path = game_dir.join(archive_name);
     // JRE 是单文件，用响应 Content-Length 实时上报 90% → 100% 的平滑进度
-    let progress = app.map(|a| ProgressCtx::new(a.clone(), 90.0, 100.0, 0));
+    let progress = app.map(|a| ProgressCtx::new(a.clone(), 90.0, 100.0, 0, "jre"));
     download_file(client, &url, &archive_path, progress.as_ref()).await?;
     // 兜底：Content-Length 缺失时进度可能未推进，强制收敛到 100%
     if let Some(p) = progress.as_ref() {
@@ -104,7 +108,8 @@ mod tests {
     async fn download_jre_to_game_dir() {
         let client = Client::new();
         let game_dir = Path::new("game");
-        download_jre(&client, game_dir, None)
+        let cos = CosSource::from_config(None);
+        download_jre(&client, game_dir, cos.as_ref(), None)
             .await
             .expect("下载 JRE 失败");
 

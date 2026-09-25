@@ -3,6 +3,34 @@ use tracing::{debug, info};
 
 use crate::paths;
 
+/// 代码内置的默认配置：config.json 中缺失或为空的项回退到这里
+const DEFAULTS: &[(&str, &str)] = &[
+    ("gameIsInstalled", "false"),
+    ("serverUrl", "http://localhost:3000"),
+    (
+        "winJrePath",
+        "https://cdn.azul.com/zulu/bin/zulu21.52.15-ca-jre21.0.12-win_x64.zip",
+    ),
+    (
+        "macJrePath",
+        "https://cdn.azul.com/zulu/bin/zulu21.52.15-ca-jre21.0.12-macosx_x64.tar.gz",
+    ),
+    ("gameZipPath", ""),
+    ("cosBucket", ""),
+    ("cosRegion", ""),
+    ("cosSecretId", ""),
+    ("cosSecretKey", ""),
+    ("apiKey", "sk-"),
+    ("apiBase", "https://api.deepseek.com"),
+];
+
+fn default_for(key: &str) -> Option<&'static str> {
+    DEFAULTS
+        .iter()
+        .find(|(k, _)| *k == key)
+        .map(|(_, v)| *v)
+}
+
 /// 确保运行目录存在配置文件；缺失时从打包资源目录复制初始配置。
 fn ensure_config_file(app: &tauri::AppHandle) -> Result<(), String> {
     let cfg_path = paths::config_path()?;
@@ -26,23 +54,27 @@ fn ensure_config_file(app: &tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-/// 读取配置值（app 为 None 时回退当前目录，供测试/无窗口上下文场景使用）
+/// 读取配置值：config.json 优先，缺失/为空时回退内置默认值
+/// （app 为 None 时回退当前目录，供测试/无窗口上下文场景使用）
 pub fn get_config(app: Option<&tauri::AppHandle>, key: &str) -> Result<String, String> {
     if let Some(handle) = app {
         ensure_config_file(handle)?;
     }
     info!("get_config 调用: key={}", key);
     let cfg_path = paths::config_path()?;
-    let content = std::fs::read_to_string(&cfg_path)
-        .map_err(|e| format!("读取配置文件失败: {}", e))?;
-    let json: serde_json::Value = serde_json::from_str(&content)
-        .map_err(|e| format!("解析配置文件失败: {}", e))?;
-    let value = json[key]
-        .as_str()
-        .map(|s| s.to_string())
-        .ok_or_else(|| format!("config.json 缺少 {} 字段", key))?;
-    info!("get_config 返回: {} = {}", key, value);
-    debug!("读取配置 {} = {}", key, value);
+    let from_file = std::fs::read_to_string(&cfg_path)
+        .ok()
+        .and_then(|content| serde_json::from_str::<serde_json::Value>(&content).ok())
+        .and_then(|json| json[key].as_str().map(|s| s.trim().to_string()))
+        .filter(|v| !v.is_empty());
+    if let Some(value) = from_file {
+        info!("get_config 返回: {} = {}", key, value);
+        return Ok(value);
+    }
+    let value = default_for(key)
+        .ok_or_else(|| format!("config.json 缺少 {} 字段", key))?
+        .to_string();
+    info!("get_config 回退默认值: {} = {}", key, value);
     Ok(value)
 }
 

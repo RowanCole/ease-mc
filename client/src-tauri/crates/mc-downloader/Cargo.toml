@@ -15,6 +15,10 @@ zip = "8.6.0"
 flate2 = "1"
 tar = "0.4"
 mc-core = { path = "../mc-core" }
+external = { path = "../external" }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+
+[build-dependencies]
+embed-resource = "3"

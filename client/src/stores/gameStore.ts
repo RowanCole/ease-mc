@@ -39,13 +39,24 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
     set({ status: 'downloading', statusText: '游戏下载中...', downloadPercent: 0 })
 
-    const unlistenProgress = await listen<{ percent: number }>('download-progress', (event) => {
-      set({ downloadPercent: event.payload.percent })
-    })
-    // 监听运行环境安装事件（JRE 下载解压阶段），切换按钮文案与颜色
-    const unlistenExtract = await listen('extract-start', () => {
-      set({ isExtracting: true, statusText: '正在安装运行环境...' })
-      notify('正在安装运行环境，请稍候...', 'info')
+    const unlistenProgress = await listen<{ percent: number; stage?: string }>(
+      'download-progress',
+      (event) => {
+        const { percent, stage } = event.payload
+        set({ downloadPercent: percent })
+        if (stage === 'extract') set({ statusText: '正在解压游戏文件...' })
+        else if (stage === 'jre') set({ statusText: '正在安装运行环境...' })
+      }
+    )
+    // 监听解压事件：游戏整包解压与 JRE 安装两个阶段
+    const unlistenExtract = await listen<{ stage: string }>('extract-start', (event) => {
+      set({ isExtracting: true })
+      if (event.payload.stage === 'jre') {
+        set({ statusText: '正在安装运行环境...' })
+        notify('正在安装运行环境，请稍候...', 'info')
+      } else {
+        set({ statusText: '正在解压游戏文件...' })
+      }
     })
 
     try {

@@ -951,12 +951,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dotenv"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
-
-[[package]]
 name = "dpi"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1085,7 +1079,6 @@ name = "external"
 version = "0.1.0"
 dependencies = [
  "async-openai",
- "dotenv",
  "futures-util",
  "hex",
  "hmac 0.12.1",
@@ -2343,8 +2336,8 @@ name = "mc-assistant"
 version = "0.1.0"
 dependencies = [
  "async-openai",
- "dotenv",
  "futures-util",
+ "mc-core",
  "tauri",
  "tokio",
  "tracing",
@@ -2363,6 +2356,8 @@ dependencies = [
 name = "mc-downloader"
 version = "0.1.0"
 dependencies = [
+ "embed-resource",
+ "external",
  "flate2",
  "futures-util",
  "mc-core",
@@ -2388,7 +2383,6 @@ dependencies = [
 name = "mc-starter"
 version = "0.1.0"
 dependencies = [
- "dotenv",
  "external",
  "mc-assistant",
  "mc-core",

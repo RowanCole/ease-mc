@@ -12,10 +12,17 @@ pub struct ProgressCtx {
     start: f64,
     span: f64,
     total_bytes: u64,
+    stage: &'static str,
 }
 
 impl ProgressCtx {
-    pub fn new(app: tauri::AppHandle, start: f64, end: f64, total_bytes: u64) -> Self {
+    pub fn new(
+        app: tauri::AppHandle,
+        start: f64,
+        end: f64,
+        total_bytes: u64,
+        stage: &'static str,
+    ) -> Self {
         Self {
             app,
             done: Arc::new(AtomicU64::new(0)),
@@ -23,6 +30,7 @@ impl ProgressCtx {
             start,
             span: end - start,
             total_bytes,
+            stage,
         }
     }
 
@@ -43,7 +51,10 @@ impl ProgressCtx {
             self.last_percent.store(key, Ordering::SeqCst);
             let _ = self
                 .app
-                .emit("download-progress", serde_json::json!({ "percent": percent }));
+                .emit(
+                    "download-progress",
+                    serde_json::json!({ "percent": percent, "stage": self.stage }),
+                );
         }
     }
 
@@ -52,6 +63,9 @@ impl ProgressCtx {
         let end = self.start + self.span;
         let _ = self
             .app
-            .emit("download-progress", serde_json::json!({ "percent": end }));
+            .emit(
+                "download-progress",
+                serde_json::json!({ "percent": end, "stage": self.stage }),
+            );
     }
 }
